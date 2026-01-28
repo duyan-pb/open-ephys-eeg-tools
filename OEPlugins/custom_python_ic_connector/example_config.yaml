@@ -1,0 +1,55 @@
+# Custom IC Configuration Example
+# ================================
+# Copy this file and modify for your specific IC
+
+# Device identification
+name: "MyEEG_IC"
+device_id: "my_eeg_001"
+
+# Communication settings
+interface: "serial"        # Options: serial, simulate
+port: "COM3"              # Windows: COM3, COM4, etc. | Linux: /dev/ttyUSB0
+baudrate: 2000000         # Common: 115200, 921600, 2000000
+
+# Data acquisition settings
+num_channels: 8           # Number of electrode channels
+sample_rate: 1000.0       # Samples per second (Hz)
+bits_per_sample: 16       # ADC resolution: 16, 24, or 32
+data_format: "int16"      # int16, int24, int32, or float32
+byte_order: "little"      # little (Intel) or big (Motorola)
+
+# Voltage scaling (ADC counts -> real units)
+vref: 3.3                 # ADC reference voltage in Volts
+gain: 24.0                # Analog front-end gain
+adc_max: 32767            # Max positive ADC value (2^15-1 for 16-bit signed)
+output_unit: "microvolts" # Output unit: microvolts, millivolts, volts
+
+# Channel labels (customize for your electrode montage)
+channel_names:
+  - "Fp1"
+  - "Fp2"
+  - "F3"
+  - "F4"
+  - "C3"
+  - "C4"
+  - "O1"
+  - "O2"
+
+# Channel types (EEG, EMG, ECG, EOG, etc.)
+channel_types:
+  - "EEG"
+  - "EEG"
+  - "EEG"
+  - "EEG"
+  - "EEG"
+  - "EEG"
+  - "EEG"
+  - "EEG"
+
+# Binary protocol settings
+# header_bytes: Raw sync bytes your IC sends at start of each packet
+# For bytes 0xAA 0x55, use the Python representation below
+# header_bytes will be auto-converted from the list
+has_timestamp: false      # Set true if IC sends 4-byte timestamp
+has_checksum: false       # Set true if IC sends 1-byte XOR checksum
+packet_size: 0            # 0 = auto-calculate from above settings

@@ -1,0 +1,7 @@
+# Custom Python IC Connector - Dependencies
+# Install with: pip install -r requirements.txt
+
+pylsl>=1.16.0        # Lab Streaming Layer for streaming to Open Ephys
+numpy>=1.20.0        # Numerical operations
+pyserial>=3.5        # Serial communication with hardware
+PyYAML>=6.0          # YAML configuration file support

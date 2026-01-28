@@ -1,0 +1,56 @@
+# Test data (large EEG datasets)
+test_data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+Build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.vcxproj*
+*.sln
+*.filters
+*.exp
+*.lib
+*.pdb
+*.ilk
+*.obj
+*.o
+*.a
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Open Ephys specific
+*.dll
+*.so
+*.dylib
+configs/
+shared/
+resources/
+Testing/
+
+# Logs
+*.log
+
+# Keep important Build outputs tracked via specific includes if needed
+!**/libs/
