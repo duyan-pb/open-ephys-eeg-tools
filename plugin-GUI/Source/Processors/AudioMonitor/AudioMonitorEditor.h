@@ -1,0 +1,126 @@
+/*
+    ------------------------------------------------------------------
+
+    This file is part of the Open Ephys GUI
+    Copyright (C) 2024 Open Ephys
+
+    ------------------------------------------------------------------
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
+
+#ifndef __AUDIOMONITOREDITOR_H__
+#define __AUDIOMONITOREDITOR_H__
+
+#include "../../../JuceLibraryCode/JuceHeader.h"
+#include "../../Source/UI/Utils/LinearButtonGroupManager.h"
+#include "../Editors/GenericEditor.h"
+#include "../Editors/PopupChannelSelector.h"
+#include "../Parameter/ParameterEditor.h"
+#include "AudioMonitor.h"
+
+class AudioMonitor;
+
+/**
+  Toggles audio output on and off.
+
+  @see AudioMonitor, AudioMonitorEditor
+
+*/
+class MonitorMuteButton : public ParameterEditor,
+                          public Button::Listener
+{
+public:
+    /** Constructor */
+    MonitorMuteButton (Parameter* param);
+
+    /** Destructor*/
+    ~MonitorMuteButton() {}
+
+    /** Respond to mute button clicks*/
+    void buttonClicked (Button* label);
+
+    /** Ensures button state aligns with underlying parameter*/
+    void updateView() override;
+
+    void paint (Graphics& g) override;
+
+    /** Sets component layout*/
+    void resized() override;
+
+private:
+    std::unique_ptr<ImageButton> muteButton;
+
+    Image offimage, onimage;
+};
+
+/**
+  Toggles Left / Right / Both audio output
+
+  @see AudioMonitor, AudioMonitorEditor
+
+*/
+class AudioOutputSelector : public ParameterEditor,
+                            public Button::Listener
+{
+public:
+    /** Constructor */
+    AudioOutputSelector (Parameter* param);
+
+    /** Destructor */
+    ~AudioOutputSelector() {}
+
+    /** Responds to button clicks*/
+    void buttonClicked (Button* label);
+
+    /** Ensures button state aligns with underlying parameter*/
+    virtual void updateView() override;
+
+    /** Sets component layout*/
+    virtual void resized();
+
+private:
+    std::unique_ptr<LinearButtonGroupManager> outputChannelButtonManager;
+    TextButton* leftButton;
+    TextButton* rightButton;
+    TextButton* bothButton;
+};
+
+/**
+
+  User interface for the "AudioMonitor" node.
+
+*/
+
+class AudioMonitorEditor : public GenericEditor
+{
+public:
+    /** Constructor */
+    AudioMonitorEditor (GenericProcessor* parentNode);
+
+    /** Destructor */
+    virtual ~AudioMonitorEditor() {}
+
+    /** Update filters when selected stream changes*/
+    void selectedStreamHasChanged() override;
+
+private:
+    /** Pointer to the AudioMonitor object*/
+    AudioMonitor* audioMonitor;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioMonitorEditor);
+};
+
+#endif // __AUDIOMONITOREDITOR_H__

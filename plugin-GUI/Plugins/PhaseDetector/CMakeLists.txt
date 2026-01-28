@@ -1,0 +1,19 @@
+# plugin build file
+cmake_minimum_required(VERSION 3.15)
+
+# include common rules
+include(../PluginRules.cmake)
+
+# add sources, not including OpenEphysLib.cpp
+add_sources(${PLUGIN_NAME} PhaseDetector.cpp PhaseDetector.h
+            PhaseDetectorEditor.cpp PhaseDetectorEditor.h)
+
+if(APPLE)
+  set_target_properties(
+    ${PLUGIN_NAME} PROPERTIES XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER
+                              "org.open-ephys.plugin.PhaseDetector")
+endif()
+
+if(BUILD_TESTS)
+  add_subdirectory(Tests)
+endif()

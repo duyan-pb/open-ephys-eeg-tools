@@ -1,0 +1,32 @@
+include(../ComponentRules.cmake)
+add_sources(${COMPONENT_NAME}_tests
+		EventChannelTests.cpp
+		ContinuousChannelTests.cpp
+		DataBufferTests.cpp
+		PluginManagerTests.cpp
+		SourceNodeTests.cpp
+		RecordNodeTests.cpp
+		ProcessorGraphTests.cpp
+		EventTests.cpp
+		DataThreadTests.cpp
+		GenericProcessorTests.cpp
+		MessageCenterTests.cpp
+		ChannelInfoObjectTests.cpp
+		InfoObjectTests.cpp
+		MetadataEventLockTests.cpp
+		MetadataEventObjectTests.cpp
+		MetadataEventTests.cpp
+		ParameterOwnerTests.cpp
+		../../Source/Processors/PluginManager/PluginManager.cpp
+)
+target_include_directories(
+		${COMPONENT_NAME}_tests
+		PRIVATE
+		"${SOURCE_DIRECTORY}"
+)
+
+target_compile_definitions(
+		${COMPONENT_NAME}_tests
+		PRIVATE
+		RESOURCES_DIRECTORY="${RESOURCES_DIRECTORY}"
+)

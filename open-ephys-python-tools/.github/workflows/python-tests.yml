@@ -1,0 +1,43 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+    - name: Install Python (pin to a wheel-friendly version)
+      run: |
+        uv python install 3.12
+        uv python pin 3.12
+
+    - name: Create virtualenv
+      run: uv venv
+
+    - name: Preinstall h5py as wheel only
+      run: uv pip install "--only-binary=:all:" "h5py==3.13.0"
+
+    - name: Install the project
+      run: uv sync --extra dev
+
+    - name: Run tests
+      run: uv run pytest tests
+

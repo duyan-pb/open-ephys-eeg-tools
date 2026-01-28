@@ -1,0 +1,86 @@
+name: Windows
+
+on:
+  push:
+    paths:
+    - '.github/workflows/**'
+    - 'JuceLibraryCode/**'
+    - 'PluginGenerator/**'
+    - 'Plugins/**'
+    - 'Resources/**'
+    - 'Source/**'
+    - 'CMakeLists.txt'
+    - 'HelperFunctions.cmake'
+  pull_request:
+    paths:
+    - '.github/workflows/**'
+    - 'JuceLibraryCode/**'
+    - 'PluginGenerator/**'
+    - 'Plugins/**'
+    - 'Resources/**'
+    - 'Source/**'
+    - 'CMakeLists.txt'
+    - 'HelperFunctions.cmake'
+
+jobs:
+  build-windows:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: configure
+      run: |
+        cd Build 
+        cmake -G "Visual Studio 17 2022" -A x64 ..
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+    - name: build
+      run: |
+        msbuild Build/ALL_BUILD.vcxproj -p:Configuration=Release -p:Platform=x64 -m
+    - name: deploy
+      env:
+        ARTIFACTORY_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_ACCESS_TOKEN }}
+      run: |
+        gui_ver=v$(grep -w CMakeLists.txt -e 'GUI_VERSION' | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+(-([0-9A-Za-z\.-]+))?")
+
+        if [ ${{github.ref_name}} == 'development' ]; then
+          version_suffix=-dev
+          artifactory_repo=Dev
+          gui_ver=latest
+        elif [ ${{github.ref_name}} == 'testing' ]; then
+          version_suffix=-beta
+          artifactory_repo=Test
+        elif [ ${{github.ref_name}} == 'main' ]; then
+          artifactory_repo=Release
+        else
+          echo "This branch is not configured for deployment."
+          exit 0
+        fi
+
+        cd Build
+        cp -r Release open-ephys
+        cp -r ../Resources/DLLs/FrontPanelUSB-DriverOnly-4.5.5.exe open-ephys
+        cp -r ../Resources/DLLs/FTD3XXDriver_WHQLCertified_1.3.0.10_Installer.exe open-ephys
+        cp ../LICENSE open-ephys
+        cp C:/Windows/System32/msvcp140.dll open-ephys
+        cp C:/Windows/System32/vcruntime140.dll open-ephys
+        cp C:/Windows/System32/vcruntime140_1.dll open-ephys
+        zipfile=open-ephys-${gui_ver}-windows${version_suffix}.zip
+        powershell Compress-Archive -Path "open-ephys" -DestinationPath ${zipfile}
+        user_info="X-JFrog-Art-Api:$ARTIFACTORY_ACCESS_TOKEN"
+        curl -H $user_info -T $zipfile "https://openephys.jfrog.io/artifactory/GUI-binaries/${artifactory_repo}/windows/$zipfile"
+
+        cd open-ephys
+        rm -f msvcp140.dll vcruntime140.dll vcruntime140_1.dll
+        cd ../../Resources/Installers/Windows
+        iscc "windows_installer_script.iss"
+        installer=Install-Open-Ephys-GUI-${gui_ver}${version_suffix}.exe
+        mv Open-Ephys_Installer.exe $installer
+        curl -H $user_info -T $installer "https://openephys.jfrog.io/artifactory/GUI-binaries/${artifactory_repo}-Installer/windows/$installer"
+      shell: bash
