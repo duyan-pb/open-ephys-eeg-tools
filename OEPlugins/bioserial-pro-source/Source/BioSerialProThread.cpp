@@ -12,6 +12,7 @@
 #include "BioSerialProEditor.h"
 #include <cmath>
 #include <algorithm>
+#include <thread>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -858,7 +859,11 @@ bool BioSerialProThread::updateBuffer()
     }
     
     if (bytesRead <= 0)
+    {
+        // Sleep briefly to avoid busy-looping when no data available
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
         return true;  // No data available, but not an error
+    }
     
     // Parse packets
     auto samples = parser->parse(readBuffer.data(), bytesRead);
@@ -980,7 +985,11 @@ void BioSerialProThread::generateSimulatedData()
     
     int samplesToGenerate = (int)(targetSamples - totalSamples);
     if (samplesToGenerate <= 0)
+    {
+        // Sleep briefly to avoid busy-looping and hogging CPU
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
         return;
+    }
     
     if (samplesToGenerate > bufferSize)
         samplesToGenerate = bufferSize;
