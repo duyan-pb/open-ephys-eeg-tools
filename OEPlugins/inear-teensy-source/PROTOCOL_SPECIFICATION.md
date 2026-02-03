@@ -1,6 +1,6 @@
-# BioSerial-Pro Protocol Specification
+# InEar Teensy Protocol Specification
 
-Technical specification for the BioSerial-Pro EEG streaming protocol used between Teensy 4.1 firmware and Open Ephys plugin.
+Technical specification for the InEar Teensy EEG streaming protocol used between Teensy 4.1 firmware and Open Ephys plugin.
 
 ---
 
@@ -19,7 +19,7 @@ Technical specification for the BioSerial-Pro EEG streaming protocol used betwee
 
 ## 1. Overview
 
-BioSerial-Pro is a binary streaming protocol designed for real-time EEG acquisition from an ADS1299-based biosignal amplifier connected to a Teensy 4.1 microcontroller.
+InEar Teensy is a binary streaming protocol designed for real-time EEG acquisition from an ADS1299-based biosignal amplifier connected to a Teensy 4.1 microcontroller.
 
 | Parameter | Value |
 |-----------|-------|
@@ -440,7 +440,7 @@ FOOTER = bytes([0xC0, 0xC0])
 PACKET_SIZE = 56
 
 def parse_packet(data: bytes) -> dict:
-    """Parse a 56-byte BioSerial-Pro packet."""
+    """Parse a 56-byte InEar Teensy packet."""
     if len(data) != 56:
         raise ValueError(f"Expected 56 bytes, got {len(data)}")
     
@@ -487,7 +487,7 @@ def parse_packet(data: bytes) -> dict:
 
 ```cpp
 // C/C++ Header
-namespace BioSerialPro {
+namespace InEarTeensy {
     // Packet structure
     constexpr uint8_t  HEADER_BYTE_1    = 0xA5;
     constexpr uint8_t  HEADER_BYTE_2    = 0x5A;
@@ -535,3 +535,4 @@ namespace BioSerialPro {
 2. **Teensy 4.1 Documentation** - PJRC
 3. **Open Ephys Plugin API** - open-ephys.org
 4. **USB 2.0 Specification** - usb.org
+

@@ -1,17 +1,17 @@
 /*
     ------------------------------------------------------------------
 
-    BioSerial-Pro Source Plugin for Open Ephys
+    InEar Teensy Source Plugin for Open Ephys
     
     Editor UI implementation.
 
     ------------------------------------------------------------------
 */
 
-#include "BioSerialProEditor.h"
-#include "BioSerialProThread.h"
+#include "InEarTeensyEditor.h"
+#include "InEarTeensyThread.h"
 
-BioSerialProEditor::BioSerialProEditor(GenericProcessor* parentNode, BioSerialProThread* t)
+InEarTeensyEditor::InEarTeensyEditor(GenericProcessor* parentNode, InEarTeensyThread* t)
     : GenericEditor(parentNode),
       thread(t)
 {
@@ -68,22 +68,22 @@ BioSerialProEditor::BioSerialProEditor(GenericProcessor* parentNode, BioSerialPr
     startTimer(500);
 }
 
-BioSerialProEditor::~BioSerialProEditor()
+InEarTeensyEditor::~InEarTeensyEditor()
 {
     stopTimer();
 }
 
-void BioSerialProEditor::resized()
+void InEarTeensyEditor::resized()
 {
     GenericEditor::resized();
 }
 
-void BioSerialProEditor::timerCallback()
+void InEarTeensyEditor::timerCallback()
 {
     updateStatus();
 }
 
-void BioSerialProEditor::refreshPorts()
+void InEarTeensyEditor::refreshPorts()
 {
     portSelector->clear();
     
@@ -113,7 +113,7 @@ void BioSerialProEditor::refreshPorts()
         portSelector->setSelectedId(1);
 }
 
-void BioSerialProEditor::comboBoxChanged(ComboBox* comboBox)
+void InEarTeensyEditor::comboBoxChanged(ComboBox* comboBox)
 {
     if (comboBox == portSelector.get())
     {
@@ -130,7 +130,7 @@ void BioSerialProEditor::comboBoxChanged(ComboBox* comboBox)
     }
 }
 
-void BioSerialProEditor::buttonClicked(Button* button)
+void InEarTeensyEditor::buttonClicked(Button* button)
 {
     if (button == refreshButton.get())
     {
@@ -159,11 +159,11 @@ void BioSerialProEditor::buttonClicked(Button* button)
         {
             if (thread->connect())
             {
-                LOGC("BioSerialPro: Connected successfully");
+                LOGC("InEarTeensy: Connected successfully");
             }
             else
             {
-                LOGC("BioSerialPro: Connection failed");
+                LOGC("InEarTeensy: Connection failed");
             }
         }
         
@@ -172,7 +172,7 @@ void BioSerialProEditor::buttonClicked(Button* button)
     }
 }
 
-void BioSerialProEditor::updateStatus()
+void InEarTeensyEditor::updateStatus()
 {
     if (thread->isSimulating())
     {
@@ -190,13 +190,13 @@ void BioSerialProEditor::updateStatus()
     {
         statusLabel->setText("Disconnected", dontSendNotification);
         statusLabel->setColour(Label::textColourId, Colours::grey);
-        infoLabel->setText("BioSerial-Pro Protocol (Teensy + ADS1299)", dontSendNotification);
+        infoLabel->setText("InEar Teensy Protocol (Teensy + ADS1299)", dontSendNotification);
     }
     
     updateConnectButton();
 }
 
-void BioSerialProEditor::updateConnectButton()
+void InEarTeensyEditor::updateConnectButton()
 {
     if (thread->isSimulating())
     {
@@ -217,3 +217,5 @@ void BioSerialProEditor::updateConnectButton()
         connectButton->setColour(TextButton::buttonColourId, Colour(0xff006400));  // Dark green
     }
 }
+
+

@@ -1,5 +1,5 @@
 /*
- * BioSerial-Pro Firmware for Teensy 4.1
+ * InEar Teensy Firmware for Teensy 4.1
  * 
  * SIMULATION MODE: Generates synthetic data for all sensors
  * Streams 56-byte packets over USB at 1kHz to Open Ephys
@@ -17,15 +17,15 @@
 #define SAMPLE_RATE_HZ 1000
 #define USB_BAUD 2000000
 
-// BioSerial-Pro Protocol Constants (must match plugin!)
-#define BSP_HEADER_1     0xA5
-#define BSP_HEADER_2     0x5A
-#define BSP_FOOTER_1     0xC0
-#define BSP_FOOTER_2     0xC0
-#define BSP_PACKET_SIZE  56
-#define BSP_NUM_EEG_CH   5
-#define BSP_NUM_ACCEL_CH 3
-#define BSP_NUM_PPG_CH   3
+// InEar Teensy Protocol Constants (must match plugin!)
+#define IET_HEADER_1     0xA5
+#define IET_HEADER_2     0x5A
+#define IET_FOOTER_1     0xC0
+#define IET_FOOTER_2     0xC0
+#define IET_PACKET_SIZE  56
+#define IET_NUM_EEG_CH   5
+#define IET_NUM_ACCEL_CH 3
+#define IET_NUM_PPG_CH   3
 
 // Math constant - avoid conflict with Arduino's wiring.h
 #ifndef TWO_PI
@@ -58,7 +58,7 @@
 // GLOBAL VARIABLES
 // ============================================================================
 
-uint8_t packetBuffer[BSP_PACKET_SIZE];
+uint8_t packetBuffer[IET_PACKET_SIZE];
 uint8_t packetCounter = 0;
 uint32_t sampleCount = 0;
 
@@ -71,7 +71,7 @@ IntervalTimer sampleTimer;
 volatile bool dataReady = false;
 
 // EEG simulation frequencies (Hz) for each channel
-const float eegFreqs[BSP_NUM_EEG_CH] = {3.0f, 6.0f, 10.0f, 20.0f, 40.0f};
+const float eegFreqs[IET_NUM_EEG_CH] = {3.0f, 6.0f, 10.0f, 20.0f, 40.0f};
 
 // ============================================================================
 // SIMULATION DATA GENERATION
@@ -80,7 +80,7 @@ const float eegFreqs[BSP_NUM_EEG_CH] = {3.0f, 6.0f, 10.0f, 20.0f, 40.0f};
 void generateSimulatedData() {
     // --- EEG Data (5 channels, 24-bit each, BIG ENDIAN) ---
     // Generate sine waves at different frequencies with some noise
-    for (int ch = 0; ch < BSP_NUM_EEG_CH; ch++) {
+    for (int ch = 0; ch < IET_NUM_EEG_CH; ch++) {
         float amplitude = 100000.0f;  // ~100µV in 24-bit scale
         float signal = amplitude * sin(TWO_PI * eegFreqs[ch] * simTime);
         
@@ -195,8 +195,8 @@ void packInt48BE(uint8_t* dest, int64_t value) {
 
 void buildPacket() {
     // Header (bytes 0-1): 0xA5 0x5A
-    packetBuffer[0] = BSP_HEADER_1;
-    packetBuffer[1] = BSP_HEADER_2;
+    packetBuffer[0] = IET_HEADER_1;
+    packetBuffer[1] = IET_HEADER_2;
     
     // Timestamp (bytes 2-5, BIG ENDIAN microseconds)
     uint32_t timestamp = micros();
@@ -227,8 +227,8 @@ void buildPacket() {
     packetBuffer[53] = checksum;
     
     // Footer (bytes 54-55): 0xC0 0xC0
-    packetBuffer[54] = BSP_FOOTER_1;
-    packetBuffer[55] = BSP_FOOTER_2;
+    packetBuffer[54] = IET_FOOTER_1;
+    packetBuffer[55] = IET_FOOTER_2;
     
     // Increment sample count (used for sync timing in both modes)
     sampleCount++;
@@ -241,7 +241,7 @@ void readRealSensorData() {
 }
 
 void sendPacket() {
-    Serial.write(packetBuffer, BSP_PACKET_SIZE);
+    Serial.write(packetBuffer, IET_PACKET_SIZE);
 }
 
 // ============================================================================
@@ -267,7 +267,7 @@ void setup() {
     }
     
     // Initialize packet buffer
-    memset(packetBuffer, 0, BSP_PACKET_SIZE);
+    memset(packetBuffer, 0, IET_PACKET_SIZE);
     
     // Initialize random seed
     randomSeed(analogRead(0));
@@ -299,3 +299,4 @@ void loop() {
         }
     }
 }
+

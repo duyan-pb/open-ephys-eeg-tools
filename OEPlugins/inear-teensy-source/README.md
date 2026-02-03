@@ -1,8 +1,8 @@
-# BioSerial-Pro Source Plugin for Open Ephys
+# InEar Teensy Source Plugin for Open Ephys
 
-A DataThread plugin that reads EEG data from a Teensy microcontroller with ADS1299 analog front-end using the BioSerial-Pro fixed-length packet protocol.
+A DataThread plugin that reads EEG data from a Teensy microcontroller with ADS1299 analog front-end using the InEar Teensy fixed-length packet protocol.
 
-## Protocol: BioSerial-Pro
+## Protocol: InEar Teensy
 
 56-byte fixed-length packets transmitted at 1 kHz over USB at 2 Mbaud.
 
@@ -65,8 +65,8 @@ cmake --install . --config Release
 
 ## Usage
 
-1. **Connect Teensy** running `bioserial_pro_firmware.ino`
-2. **Load Plugin** in Open Ephys: Processors → Sources → BioSerial-Pro
+1. **Connect Teensy** running `inear_teensy_firmware.ino`
+2. **Load Plugin** in Open Ephys: Processors → Sources → InEar Teensy
 3. **Select COM Port** from dropdown
 4. **Click Connect**
 5. **Start Acquisition** (play button)
@@ -78,7 +78,7 @@ Enable "Simulate" checkbox to test without hardware. Generates sine waves on all
 ## Signal Chain Example
 
 ```
-[BioSerial-Pro Source] → [LSL Outlet] → [LFP Viewer]
+[InEar Teensy Source] → [LSL Outlet] → [LFP Viewer]
 ```
 
 The LSL Outlet broadcasts timestamped data to the network for use in external applications (Python, MATLAB, etc.).
@@ -94,3 +94,4 @@ The LSL Outlet broadcasts timestamped data to the network for use in external ap
 ## License
 
 MIT License - See Open Ephys plugin guidelines.
+

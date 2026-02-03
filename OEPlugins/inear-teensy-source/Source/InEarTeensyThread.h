@@ -1,10 +1,10 @@
 /*
     ------------------------------------------------------------------
 
-    BioSerial-Pro Source Plugin for Open Ephys
+    InEar Teensy Source Plugin for Open Ephys
     
     A DataThread plugin for reading EEG data from Teensy + ADS1299
-    using the BioSerial-Pro fixed-length packet protocol.
+    using the InEar Teensy fixed-length packet protocol.
 
     Protocol: 56-byte packets @ 1kHz
     - Header:      0xA5 0x5A (2B)
@@ -23,8 +23,8 @@
     ------------------------------------------------------------------
 */
 
-#ifndef BIOSERIAL_PRO_THREAD_H
-#define BIOSERIAL_PRO_THREAD_H
+#ifndef INEAR_TEENSY_THREAD_H
+#define INEAR_TEENSY_THREAD_H
 
 #include <DataThreadHeaders.h>
 #include <atomic>
@@ -43,7 +43,7 @@
     #include <sys/ioctl.h>
 #endif
 
-namespace BioSerialPro {
+namespace InEarTeensy {
 
 // =============================================================================
 // Protocol Constants
@@ -145,7 +145,7 @@ private:
 };
 
 // =============================================================================
-// BioSerial-Pro Protocol Parser
+// InEar Teensy Protocol Parser
 // =============================================================================
 
 class ProtocolParser
@@ -182,18 +182,18 @@ private:
     int64_t bytes48ToInt64(const uint8_t* bytes);
 };
 
-} // namespace BioSerialPro
+} // namespace InEarTeensy
 
 
 // =============================================================================
-// BioSerialProThread - DataThread Implementation
+// InEarTeensyThread - DataThread Implementation
 // =============================================================================
 
-class BioSerialProThread : public DataThread
+class InEarTeensyThread : public DataThread
 {
 public:
-    BioSerialProThread(SourceNode* sn);
-    ~BioSerialProThread();
+    InEarTeensyThread(SourceNode* sn);
+    ~InEarTeensyThread();
 
     // ------------------------------------------------------------
     // Pure Virtual Methods (Required by DataThread)
@@ -236,16 +236,16 @@ public:
     void disconnect();
 
     static DataThread* createDataThread(SourceNode* sn);
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BioSerialProThread);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InEarTeensyThread);
 
 private:
     // Serial communication
-    std::unique_ptr<BioSerialPro::SerialPort> serial;
+    std::unique_ptr<InEarTeensy::SerialPort> serial;
     String portName = "";
     int baudRate = 2000000;  // 2 Mbaud for USB
     
     // Protocol parser
-    std::unique_ptr<BioSerialPro::ProtocolParser> parser;
+    std::unique_ptr<InEarTeensy::ProtocolParser> parser;
     
     // Read buffer
     std::vector<uint8_t> readBuffer;
@@ -276,4 +276,6 @@ private:
     void generateSimulatedData();
 };
 
-#endif // BIOSERIAL_PRO_THREAD_H
+#endif // INEAR_TEENSY_THREAD_H
+
+

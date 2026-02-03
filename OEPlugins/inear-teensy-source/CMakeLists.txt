@@ -1,4 +1,4 @@
-# BioSerial-Pro Source Plugin for Open Ephys
+# InEar Teensy Source Plugin for Open Ephys
 # A DataThread plugin for reading EEG data from Teensy + ADS1299
 
 cmake_minimum_required(VERSION 3.15)
@@ -13,7 +13,7 @@ if (NOT DEFINED GUI_BASE_DIR)
     endif()
 endif()
 
-set(PLUGIN_NAME "bioserial-pro-source")
+set(PLUGIN_NAME "inear-teensy-source")
 
 project(OE_PLUGIN_${PLUGIN_NAME})
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
@@ -97,8 +97,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Build/$<CONFIG>)
 
 # Print configuration
 message(STATUS "")
-message(STATUS "== BioSerial-Pro Source Plugin ==")
+message(STATUS "== InEar Teensy Source Plugin ==")
 message(STATUS "Plugin name: ${PLUGIN_NAME}")
 message(STATUS "GUI base dir: ${GUI_BASE_DIR}")
 message(STATUS "GUI bin dir: ${GUI_BIN_DIR}")
 message(STATUS "")
+
+

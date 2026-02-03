@@ -1,6 +1,6 @@
-# BioSerial-Pro Build & Deploy Guide
+# InEar Teensy Build & Deploy Guide
 
-Complete instructions for building, deploying, and running the BioSerial-Pro system on Windows, Linux, and macOS.
+Complete instructions for building, deploying, and running the InEar Teensy system on Windows, Linux, and macOS.
 
 ---
 
@@ -49,7 +49,7 @@ Python 3.8+ with `pyserial` package.
 
 ## 2. Teensy Firmware
 
-The firmware runs on Teensy 4.1 and streams EEG data over USB using the BioSerial-Pro protocol.
+The firmware runs on Teensy 4.1 and streams EEG data over USB using the InEar Teensy protocol.
 
 ### 2.1 Find Your Serial Port
 
@@ -65,8 +65,8 @@ Compiles the sketch without uploading - useful to check for errors.
 
 | Platform | Command |
 |----------|---------|
-| **Windows** | `& "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe" compile --fqbn teensy:avr:teensy41 "path\to\bioserial_pro_firmware.ino"` |
-| **Linux/macOS** | `arduino-cli compile --fqbn teensy:avr:teensy41 ./bioserial_pro_firmware/bioserial_pro_firmware.ino` |
+| **Windows** | `& "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe" compile --fqbn teensy:avr:teensy41 "path\to\inear_teensy_firmware.ino"` |
+| **Linux/macOS** | `arduino-cli compile --fqbn teensy:avr:teensy41 ./inear_teensy_firmware/inear_teensy_firmware.ino` |
 
 **Flags explained:**
 - `compile` - Compile without uploading
@@ -78,9 +78,9 @@ Compiles (if needed) and uploads to the connected Teensy.
 
 | Platform | Command |
 |----------|---------|
-| **Windows** | `& "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe" upload -p COM5 --fqbn teensy:avr:teensy41 "path\to\bioserial_pro_firmware.ino"` |
-| **Linux** | `arduino-cli upload -p /dev/ttyACM0 --fqbn teensy:avr:teensy41 ./bioserial_pro_firmware/bioserial_pro_firmware.ino` |
-| **macOS** | `arduino-cli upload -p /dev/cu.usbmodem* --fqbn teensy:avr:teensy41 ./bioserial_pro_firmware/bioserial_pro_firmware.ino` |
+| **Windows** | `& "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe" upload -p COM5 --fqbn teensy:avr:teensy41 "path\to\inear_teensy_firmware.ino"` |
+| **Linux** | `arduino-cli upload -p /dev/ttyACM0 --fqbn teensy:avr:teensy41 ./inear_teensy_firmware/inear_teensy_firmware.ino` |
+| **macOS** | `arduino-cli upload -p /dev/cu.usbmodem* --fqbn teensy:avr:teensy41 ./inear_teensy_firmware/inear_teensy_firmware.ino` |
 
 **Flags explained:**
 - `upload` - Compile and upload to board
@@ -98,9 +98,9 @@ Creates build system files in the `Build` directory.
 
 | Platform | Command |
 |----------|---------|
-| **Windows** | `cd OEPlugins\bioserial-pro-source; mkdir Build; cd Build; cmake -G "Visual Studio 17 2022" -A x64 ..` |
-| **Linux** | `cd OEPlugins/bioserial-pro-source && mkdir -p Build && cd Build && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ..` |
-| **macOS** | `cd OEPlugins/bioserial-pro-source && mkdir -p Build && cd Build && cmake -G "Xcode" ..` |
+| **Windows** | `cd OEPlugins\InEar Teensy-source; mkdir Build; cd Build; cmake -G "Visual Studio 17 2022" -A x64 ..` |
+| **Linux** | `cd OEPlugins/InEar Teensy-source && mkdir -p Build && cd Build && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ..` |
+| **macOS** | `cd OEPlugins/InEar Teensy-source && mkdir -p Build && cd Build && cmake -G "Xcode" ..` |
 
 **Flags explained:**
 - `-G "Visual Studio 17 2022"` - Generator for VS2022 (Windows)
@@ -131,27 +131,27 @@ Copy the built plugin to Open Ephys plugins folder.
 
 | Platform | Source File | Destination |
 |----------|-------------|-------------|
-| **Windows** | `Build\Release\bioserial-pro-source.dll` | `<Open Ephys>\plugins\` |
-| **Linux** | `Build/libbioserial-pro-source.so` | `~/.local/lib/open-ephys/plugins/` |
-| **macOS** | `Build/Release/bioserial-pro-source.bundle` | `~/Library/Application Support/open-ephys/plugins/` |
+| **Windows** | `Build\Release\InEar Teensy-source.dll` | `<Open Ephys>\plugins\` |
+| **Linux** | `Build/libInEar Teensy-source.so` | `~/.local/lib/open-ephys/plugins/` |
+| **macOS** | `Build/Release/InEar Teensy-source.bundle` | `~/Library/Application Support/open-ephys/plugins/` |
 
 **Commands:**
 
 ```powershell
 # Windows (PowerShell)
-Copy-Item -Force "Build\Release\bioserial-pro-source.dll" "C:\path\to\open-ephys\plugins\"
+Copy-Item -Force "Build\Release\InEar Teensy-source.dll" "C:\path\to\open-ephys\plugins\"
 ```
 
 ```bash
 # Linux
 mkdir -p ~/.local/lib/open-ephys/plugins
-cp Build/libbioserial-pro-source.so ~/.local/lib/open-ephys/plugins/
+cp Build/libInEar Teensy-source.so ~/.local/lib/open-ephys/plugins/
 ```
 
 ```bash
 # macOS
 mkdir -p ~/Library/Application\ Support/open-ephys/plugins
-cp Build/Release/bioserial-pro-source.bundle ~/Library/Application\ Support/open-ephys/plugins/
+cp Build/Release/InEar Teensy-source.bundle ~/Library/Application\ Support/open-ephys/plugins/
 ```
 
 ### 3.4 Alternative Plugin Locations
@@ -190,14 +190,14 @@ pip install pyserial
 
 | Platform | Command |
 |----------|---------|
-| **Windows** | `python bioserial_pro_test.py --mode read --port COM5 --duration 5` |
-| **Linux** | `python bioserial_pro_test.py --mode read --port /dev/ttyACM0 --duration 5` |
-| **macOS** | `python bioserial_pro_test.py --mode read --port /dev/cu.usbmodem* --duration 5` |
+| **Windows** | `python inear_teensy_test.py --mode read --port COM5 --duration 5` |
+| **Linux** | `python inear_teensy_test.py --mode read --port /dev/ttyACM0 --duration 5` |
+| **macOS** | `python inear_teensy_test.py --mode read --port /dev/cu.usbmodem* --duration 5` |
 
 **Round-trip test (no hardware needed):**
 
 ```bash
-python bioserial_pro_test.py --mode roundtrip
+python inear_teensy_test.py --mode roundtrip
 ```
 
 **Expected output:**
@@ -220,7 +220,7 @@ Packets: 5000 | Rate: 999.8 Hz | Dropped: 0 | CRC Errors: 0
 
 ### 5.2 Configure Signal Chain
 
-1. **Add BioSerial-Pro Source**: Drag from plugin list to signal chain
+1. **Add InEar Teensy Source**: Drag from plugin list to signal chain
 2. **Configure Port**: Select your COM port (or enable Simulation mode)
 3. **Add LFP Viewer**: Drag and connect after the source
 4. **Press Play**: Start acquisition
@@ -234,7 +234,7 @@ Packets: 5000 | Rate: 999.8 Hz | Dropped: 0 | CRC Errors: 0
 Save as `build_all.ps1`:
 
 ```powershell
-# BioSerial-Pro Complete Build Script for Windows
+# InEar Teensy Complete Build Script for Windows
 
 # Configuration - EDIT THESE PATHS
 $ARDUINO_CLI = "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe"
@@ -242,12 +242,12 @@ $WORKSPACE = "C:\Users\duyan\Desktop\workspace\open-ephys"
 $PORT = "COM5"
 
 # Derived paths
-$FIRMWARE_PATH = "$WORKSPACE\bioserial_pro_firmware\bioserial_pro_firmware.ino"
-$PLUGIN_DIR = "$WORKSPACE\OEPlugins\bioserial-pro-source"
+$FIRMWARE_PATH = "$WORKSPACE\inear_teensy_firmware\inear_teensy_firmware.ino"
+$PLUGIN_DIR = "$WORKSPACE\OEPlugins\InEar Teensy-source"
 $OE_PLUGINS = "$WORKSPACE\plugin-GUI\Build\Release\plugins"
 $OE_EXE = "$WORKSPACE\plugin-GUI\Build\Release\open-ephys.exe"
 
-Write-Host "=== BioSerial-Pro Build Script ===" -ForegroundColor Cyan
+Write-Host "=== InEar Teensy Build Script ===" -ForegroundColor Cyan
 
 # 1. Build & Upload Firmware
 Write-Host "`n[1/4] Compiling firmware..." -ForegroundColor Yellow
@@ -267,7 +267,7 @@ Pop-Location
 
 # 3. Deploy Plugin
 Write-Host "`n[4/4] Deploying plugin..." -ForegroundColor Yellow
-Copy-Item -Force "$PLUGIN_DIR\Build\Release\bioserial-pro-source.dll" $OE_PLUGINS
+Copy-Item -Force "$PLUGIN_DIR\Build\Release\InEar Teensy-source.dll" $OE_PLUGINS
 
 Write-Host "`n=== Build Complete ===" -ForegroundColor Green
 Write-Host "Run Open Ephys: Start-Process `"$OE_EXE`""
@@ -281,18 +281,18 @@ Save as `build_all.sh`:
 #!/bin/bash
 set -e
 
-# BioSerial-Pro Complete Build Script for Linux
+# InEar Teensy Complete Build Script for Linux
 
 # Configuration - EDIT THESE PATHS
 WORKSPACE="$HOME/workspace/open-ephys"
 PORT="/dev/ttyACM0"
 
 # Derived paths
-FIRMWARE_PATH="$WORKSPACE/bioserial_pro_firmware/bioserial_pro_firmware.ino"
-PLUGIN_DIR="$WORKSPACE/OEPlugins/bioserial-pro-source"
+FIRMWARE_PATH="$WORKSPACE/inear_teensy_firmware/inear_teensy_firmware.ino"
+PLUGIN_DIR="$WORKSPACE/OEPlugins/InEar Teensy-source"
 OE_PLUGINS="$HOME/.local/lib/open-ephys/plugins"
 
-echo "=== BioSerial-Pro Build Script ==="
+echo "=== InEar Teensy Build Script ==="
 
 # 1. Build & Upload Firmware
 echo -e "\n[1/4] Compiling firmware..."
@@ -309,7 +309,7 @@ cmake --build . --config Release
 # 3. Deploy Plugin
 echo -e "\n[4/4] Deploying plugin..."
 mkdir -p "$OE_PLUGINS"
-cp libbioserial-pro-source.so "$OE_PLUGINS/"
+cp libInEar Teensy-source.so "$OE_PLUGINS/"
 
 echo -e "\n=== Build Complete ==="
 echo "Run Open Ephys: open-ephys"
@@ -323,18 +323,18 @@ Save as `build_all.sh`:
 #!/bin/bash
 set -e
 
-# BioSerial-Pro Complete Build Script for macOS
+# InEar Teensy Complete Build Script for macOS
 
 # Configuration - EDIT THESE PATHS
 WORKSPACE="$HOME/workspace/open-ephys"
 PORT=$(ls /dev/cu.usbmodem* 2>/dev/null | head -1)
 
 # Derived paths
-FIRMWARE_PATH="$WORKSPACE/bioserial_pro_firmware/bioserial_pro_firmware.ino"
-PLUGIN_DIR="$WORKSPACE/OEPlugins/bioserial-pro-source"
+FIRMWARE_PATH="$WORKSPACE/inear_teensy_firmware/inear_teensy_firmware.ino"
+PLUGIN_DIR="$WORKSPACE/OEPlugins/InEar Teensy-source"
 OE_PLUGINS="$HOME/Library/Application Support/open-ephys/plugins"
 
-echo "=== BioSerial-Pro Build Script ==="
+echo "=== InEar Teensy Build Script ==="
 
 # 1. Build & Upload Firmware
 echo -e "\n[1/4] Compiling firmware..."
@@ -351,7 +351,7 @@ cmake --build . --config Release
 # 3. Deploy Plugin
 echo -e "\n[4/4] Deploying plugin..."
 mkdir -p "$OE_PLUGINS"
-cp Release/bioserial-pro-source.bundle "$OE_PLUGINS/"
+cp Release/InEar Teensy-source.bundle "$OE_PLUGINS/"
 
 echo -e "\n=== Build Complete ==="
 echo "Run Open Ephys: open -a 'Open Ephys'"
@@ -390,7 +390,8 @@ echo "Run Open Ephys: open -a 'Open Ephys'"
 
 ## Version History
 
-- **v1.0** - Initial release with 56-byte BioSerial-Pro protocol
+- **v1.0** - Initial release with 56-byte InEar Teensy protocol
 - 5 EEG channels (24-bit) + 9 Aux channels @ 1kHz
 - Header: `0xA5 0x5A`, Footer: `0xC0 0xC0`
 - Checksum: XOR of bytes 0-52
+

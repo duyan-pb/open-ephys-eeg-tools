@@ -1,7 +1,7 @@
 /*
     ------------------------------------------------------------------
 
-    BioSerial-Pro Source Plugin for Open Ephys
+    InEar Teensy Source Plugin for Open Ephys
     
     Plugin registration and library information.
 
@@ -9,7 +9,7 @@
 */
 
 #include <PluginInfo.h>
-#include "BioSerialProThread.h"
+#include "InEarTeensyThread.h"
 
 #include <string>
 
@@ -23,7 +23,7 @@
 extern "C" EXPORT void getLibInfo(Plugin::LibraryInfo* info)
 {
     info->apiVersion = PLUGIN_API_VER;
-    info->name = "BioSerial-Pro Source";
+    info->name = "InEar Teensy Source";
     info->libVersion = "1.0.0";
     info->numPlugins = 1;
 }
@@ -34,8 +34,8 @@ extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
     {
         case 0:
             info->type = Plugin::Type::DATA_THREAD;
-            info->dataThread.name = "BioSerial-Pro";
-            info->dataThread.creator = &BioSerialProThread::createDataThread;
+            info->dataThread.name = "InEar Teensy";
+            info->dataThread.creator = &InEarTeensyThread::createDataThread;
             break;
             
         default:
@@ -51,3 +51,4 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     return TRUE;
 }
 #endif
+

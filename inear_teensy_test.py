@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-BioSerial-Pro Protocol Test Utility
+InEar Teensy Protocol Test Utility
 
-This script tests the BioSerial-Pro protocol by:
+This script tests the InEar Teensy protocol by:
 1. Simulating a Teensy device (for testing without hardware)
 2. Reading and parsing packets from a real device
 3. Validating packet structure and checksum
 
 Usage:
-    python bioserial_pro_test.py --mode simulate    # Simulate device
-    python bioserial_pro_test.py --mode read --port COM5  # Read from device
-    python bioserial_pro_test.py --mode parse       # Parse example packet
+    python inear_teensy_test.py --mode simulate    # Simulate device
+    python inear_teensy_test.py --mode read --port COM5  # Read from device
+    python inear_teensy_test.py --mode parse       # Parse example packet
 """
 
 import argparse
@@ -71,7 +71,7 @@ ACCEL_SCALE_G = 0.0039    # ADXL345 @ ±16g
 
 @dataclass
 class BioSerialPacket:
-    """Parsed BioSerial-Pro packet"""
+    """Parsed InEar Teensy packet"""
     timestamp_us: int
     marker: int
     eeg: List[float]      # µV (5 channels)
@@ -155,7 +155,7 @@ def unpack_int48_be(data: bytes) -> int:
 def build_packet(timestamp_us: int, marker: int, eeg_raw: List[int],
                  accel_raw: List[int], ppg_raw: List[int],
                  temp: int, battery: int, sync: int, counter: int) -> bytes:
-    """Build a BioSerial-Pro 56-byte packet from raw values"""
+    """Build a InEar Teensy 56-byte packet from raw values"""
     packet = bytearray(PACKET_SIZE)
     
     # Header (bytes 0-1)
@@ -203,7 +203,7 @@ def build_packet(timestamp_us: int, marker: int, eeg_raw: List[int],
 
 
 def parse_packet(data: bytes) -> Optional[BioSerialPacket]:
-    """Parse a BioSerial-Pro 56-byte packet"""
+    """Parse a InEar Teensy 56-byte packet"""
     if len(data) != PACKET_SIZE:
         return None
     
@@ -331,7 +331,7 @@ class ReassemblyBuffer:
 # =============================================================================
 
 class BioSerialSimulator:
-    """Simulates a BioSerial-Pro device for testing"""
+    """Simulates a InEar Teensy device for testing"""
     
     def __init__(self, port: str, baudrate: int = BAUD_RATE):
         if not SERIAL_AVAILABLE:
@@ -443,7 +443,7 @@ class BioSerialSimulator:
 # =============================================================================
 
 class BioSerialReader:
-    """Reads and parses packets from a BioSerial-Pro device"""
+    """Reads and parses packets from a InEar Teensy device"""
     
     def __init__(self, port: str, baudrate: int = BAUD_RATE):
         if not SERIAL_AVAILABLE:
@@ -545,7 +545,7 @@ class BioSerialReader:
 
 def test_packet_build_parse():
     """Test packet building and parsing"""
-    print("=== Testing BioSerial-Pro 56-byte Packet Build/Parse ===\n")
+    print("=== Testing InEar Teensy 56-byte Packet Build/Parse ===\n")
     
     # Build a test packet
     timestamp = 1000000  # 1 second
@@ -628,7 +628,7 @@ def list_ports():
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="BioSerial-Pro Protocol Test Utility")
+    parser = argparse.ArgumentParser(description="InEar Teensy Protocol Test Utility")
     parser.add_argument('--mode', choices=['simulate', 'read', 'parse', 'list'],
                        default='parse', help='Operation mode')
     parser.add_argument('--port', default='COM5', help='Serial port')
@@ -652,3 +652,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

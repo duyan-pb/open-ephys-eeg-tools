@@ -1,15 +1,15 @@
 /*
     ------------------------------------------------------------------
 
-    BioSerial-Pro Source Plugin for Open Ephys
+    InEar Teensy Source Plugin for Open Ephys
     
-    Implementation of DataThread for BioSerial-Pro protocol.
+    Implementation of DataThread for InEar Teensy protocol.
 
     ------------------------------------------------------------------
 */
 
-#include "BioSerialProThread.h"
-#include "BioSerialProEditor.h"
+#include "InEarTeensyThread.h"
+#include "InEarTeensyEditor.h"
 #include <cmath>
 #include <algorithm>
 #include <thread>
@@ -18,7 +18,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-namespace BioSerialPro {
+namespace InEarTeensy {
 
 // ============================================================================
 // SerialPort Implementation
@@ -54,7 +54,7 @@ bool SerialPort::open(const String& portName, int baudRate)
     
     if (handle == INVALID_HANDLE_VALUE)
     {
-        LOGC("BioSerialPro: Failed to open port: ", portName.toStdString());
+        LOGC("InEarTeensy: Failed to open port: ", portName.toStdString());
         return false;
     }
     
@@ -95,7 +95,7 @@ bool SerialPort::open(const String& portName, int baudRate)
     // Set large buffer sizes for high throughput
     SetupComm(handle, 32768, 4096);
     
-    LOGC("BioSerialPro: Port opened: ", portName.toStdString(), " @ ", baudRate, " baud");
+    LOGC("InEarTeensy: Port opened: ", portName.toStdString(), " @ ", baudRate, " baud");
     return true;
 }
 
@@ -193,7 +193,7 @@ bool SerialPort::open(const String& portName, int baudRate)
     fd = ::open(portName.toRawUTF8(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd < 0)
     {
-        LOGC("BioSerialPro: Failed to open port: ", portName.toStdString());
+        LOGC("InEarTeensy: Failed to open port: ", portName.toStdString());
         return false;
     }
     
@@ -237,7 +237,7 @@ bool SerialPort::open(const String& portName, int baudRate)
     
     tcsetattr(fd, TCSANOW, &options);
     
-    LOGC("BioSerialPro: Port opened: ", portName.toStdString());
+    LOGC("InEarTeensy: Port opened: ", portName.toStdString());
     return true;
 }
 
@@ -559,7 +559,7 @@ std::vector<EEGSample> ProtocolParser::parse(const uint8_t* data, int numBytes)
             {
                 int dropped = (sample.counter - expectedCounter) & 0xFF;
                 droppedPackets += dropped;
-                LOGC("BioSerialPro: Dropped ", dropped, " packets");
+                LOGC("InEarTeensy: Dropped ", dropped, " packets");
             }
         }
         
@@ -573,33 +573,33 @@ std::vector<EEGSample> ProtocolParser::parse(const uint8_t* data, int numBytes)
     return samples;
 }
 
-} // namespace BioSerialPro
+} // namespace InEarTeensy
 
 // ============================================================================
-// BioSerialProThread Implementation
+// InEarTeensyThread Implementation
 // ============================================================================
 
-DataThread* BioSerialProThread::createDataThread(SourceNode* sn)
+DataThread* InEarTeensyThread::createDataThread(SourceNode* sn)
 {
-    return new BioSerialProThread(sn);
+    return new InEarTeensyThread(sn);
 }
 
-BioSerialProThread::BioSerialProThread(SourceNode* sn)
+InEarTeensyThread::InEarTeensyThread(SourceNode* sn)
     : DataThread(sn)
 {
-    serial = std::make_unique<BioSerialPro::SerialPort>();
-    parser = std::make_unique<BioSerialPro::ProtocolParser>();
+    serial = std::make_unique<InEarTeensy::SerialPort>();
+    parser = std::make_unique<InEarTeensy::ProtocolParser>();
     readBuffer.resize(READ_BUFFER_SIZE);
     
     // Create source buffers:
     // - Stream 0: EEG (5 channels @ 1000 Hz)
     // - Stream 1: Aux (3 channels @ 200 Hz - decimated)
-    sourceBuffers.add(new DataBuffer(BioSerialPro::NUM_EEG_CHANNELS, 100000));
-    sourceBuffers.add(new DataBuffer(BioSerialPro::NUM_AUX_CHANNELS, 20000));
+    sourceBuffers.add(new DataBuffer(InEarTeensy::NUM_EEG_CHANNELS, 100000));
+    sourceBuffers.add(new DataBuffer(InEarTeensy::NUM_AUX_CHANNELS, 20000));
     
     // Allocate working buffers
-    eegBuffer = (float*)malloc(BioSerialPro::NUM_EEG_CHANNELS * bufferSize * sizeof(float));
-    auxBuffer = (float*)malloc(BioSerialPro::NUM_AUX_CHANNELS * bufferSize * sizeof(float));
+    eegBuffer = (float*)malloc(InEarTeensy::NUM_EEG_CHANNELS * bufferSize * sizeof(float));
+    auxBuffer = (float*)malloc(InEarTeensy::NUM_AUX_CHANNELS * bufferSize * sizeof(float));
     timestampBuffer = (double*)malloc(bufferSize * sizeof(double));
     sampleNumbers = (int64*)malloc(bufferSize * sizeof(int64));
     eventWords = (uint64*)malloc(bufferSize * sizeof(uint64));
@@ -609,7 +609,7 @@ BioSerialProThread::BioSerialProThread(SourceNode* sn)
         eventWords[i] = 0;
 }
 
-BioSerialProThread::~BioSerialProThread()
+InEarTeensyThread::~InEarTeensyThread()
 {
     disconnect();
     
@@ -620,13 +620,13 @@ BioSerialProThread::~BioSerialProThread()
     free(eventWords);
 }
 
-std::unique_ptr<GenericEditor> BioSerialProThread::createEditor(SourceNode* sn)
+std::unique_ptr<GenericEditor> InEarTeensyThread::createEditor(SourceNode* sn)
 {
-    std::unique_ptr<GenericEditor> editor = std::make_unique<BioSerialProEditor>(sn, this);
+    std::unique_ptr<GenericEditor> editor = std::make_unique<InEarTeensyEditor>(sn, this);
     return editor;
 }
 
-void BioSerialProThread::registerParameters()
+void InEarTeensyThread::registerParameters()
 {
     // Port selection
     StringArray ports = getAvailablePorts();
@@ -653,7 +653,7 @@ void BioSerialProThread::registerParameters()
                        false);
 }
 
-void BioSerialProThread::parameterValueChanged(Parameter* param)
+void InEarTeensyThread::parameterValueChanged(Parameter* param)
 {
     if (param->getName() == "port")
     {
@@ -671,7 +671,7 @@ void BioSerialProThread::parameterValueChanged(Parameter* param)
     }
 }
 
-void BioSerialProThread::updateSettings(
+void InEarTeensyThread::updateSettings(
     OwnedArray<ContinuousChannel>* continuousChannels,
     OwnedArray<EventChannel>* eventChannels,
     OwnedArray<SpikeChannel>* spikeChannels,
@@ -689,9 +689,9 @@ void BioSerialProThread::updateSettings(
     
     // Create device info
     DeviceInfo::Settings deviceSettings;
-    deviceSettings.name = "BioSerial-Pro";
+    deviceSettings.name = "InEar Teensy";
     deviceSettings.description = "Teensy + ADS1299 EEG Acquisition";
-    deviceSettings.identifier = "bioserial-pro";
+    deviceSettings.identifier = "InEar Teensy";
     deviceSettings.manufacturer = "Open Ephys";
     deviceSettings.serial_number = "0001";
     
@@ -701,16 +701,16 @@ void BioSerialProThread::updateSettings(
     // ========== EEG Data Stream ==========
     DataStream::Settings eegStreamSettings;
     eegStreamSettings.name = "EEG";
-    eegStreamSettings.description = "BioSerial-Pro EEG data";
+    eegStreamSettings.description = "InEar Teensy EEG data";
     eegStreamSettings.identifier = "bioserial.eeg";
-    eegStreamSettings.sample_rate = (float)BioSerialPro::EEG_SAMPLE_RATE;
+    eegStreamSettings.sample_rate = (float)InEarTeensy::EEG_SAMPLE_RATE;
     eegStreamSettings.generates_timestamps = true;
     
     DataStream* eegStream = new DataStream(eegStreamSettings);
     sourceStreams->add(eegStream);
     
     // Add EEG channels
-    for (int ch = 0; ch < BioSerialPro::NUM_EEG_CHANNELS; ch++)
+    for (int ch = 0; ch < InEarTeensy::NUM_EEG_CHANNELS; ch++)
     {
         ContinuousChannel::Settings chanSettings;
         chanSettings.type = ContinuousChannel::ELECTRODE;
@@ -727,9 +727,9 @@ void BioSerialProThread::updateSettings(
     // ========== Aux Data Stream (9 channels @ 1kHz) ==========
     DataStream::Settings auxStreamSettings;
     auxStreamSettings.name = "Aux";
-    auxStreamSettings.description = "BioSerial-Pro Auxiliary Channels";
+    auxStreamSettings.description = "InEar Teensy Auxiliary Channels";
     auxStreamSettings.identifier = "bioserial.aux";
-    auxStreamSettings.sample_rate = (float)BioSerialPro::AUX_SAMPLE_RATE;  // 1kHz
+    auxStreamSettings.sample_rate = (float)InEarTeensy::AUX_SAMPLE_RATE;  // 1kHz
     auxStreamSettings.generates_timestamps = true;
     
     DataStream* auxStream = new DataStream(auxStreamSettings);
@@ -748,7 +748,7 @@ void BioSerialProThread::updateSettings(
         "Battery voltage (mV)",
         "Sync signal"
     };
-    for (int ch = 0; ch < BioSerialPro::NUM_AUX_CHANNELS; ch++)
+    for (int ch = 0; ch < InEarTeensy::NUM_AUX_CHANNELS; ch++)
     {
         ContinuousChannel::Settings chanSettings;
         chanSettings.type = ContinuousChannel::AUX;
@@ -775,7 +775,7 @@ void BioSerialProThread::updateSettings(
     eventChannels->add(markerChannel);
 }
 
-bool BioSerialProThread::foundInputSource()
+bool InEarTeensyThread::foundInputSource()
 {
     if (simulationMode)
         return true;
@@ -783,7 +783,7 @@ bool BioSerialProThread::foundInputSource()
     return connected.load();
 }
 
-bool BioSerialProThread::startAcquisition()
+bool InEarTeensyThread::startAcquisition()
 {
     parser->reset();
     totalSamples = 0;
@@ -794,7 +794,7 @@ bool BioSerialProThread::startAcquisition()
     {
         simPhase = 0.0;
         simStartTime = std::chrono::high_resolution_clock::now();
-        LOGC("BioSerialPro: Starting acquisition (SIMULATION MODE)");
+        LOGC("InEarTeensy: Starting acquisition (SIMULATION MODE)");
         startThread();  // Start the DataThread run() loop
         return true;
     }
@@ -803,7 +803,7 @@ bool BioSerialProThread::startAcquisition()
     {
         if (!connect())
         {
-            LOGC("BioSerialPro: Failed to connect");
+            LOGC("InEarTeensy: Failed to connect");
             return false;
         }
     }
@@ -811,14 +811,14 @@ bool BioSerialProThread::startAcquisition()
     // Flush any stale data
     serial->flush();
     
-    LOGC("BioSerialPro: Starting acquisition on ", portName.toStdString());
+    LOGC("InEarTeensy: Starting acquisition on ", portName.toStdString());
     startThread();  // Start the DataThread run() loop
     return true;
 }
 
-bool BioSerialProThread::stopAcquisition()
+bool InEarTeensyThread::stopAcquisition()
 {
-    LOGC("BioSerialPro: Stopping acquisition");
+    LOGC("InEarTeensy: Stopping acquisition");
     
     // Stop the DataThread run() loop
     stopThread(1000);
@@ -830,12 +830,12 @@ bool BioSerialProThread::stopAcquisition()
     return true;
 }
 
-bool BioSerialProThread::updateBuffer()
+bool InEarTeensyThread::updateBuffer()
 {
     static int callCount = 0;
     if (callCount++ % 500 == 0)
     {
-        LOGC("BioSerialPro: updateBuffer called, count=", callCount, ", simMode=", simulationMode);
+        LOGC("InEarTeensy: updateBuffer called, count=", callCount, ", simMode=", simulationMode);
     }
     
     if (simulationMode)
@@ -846,7 +846,7 @@ bool BioSerialProThread::updateBuffer()
     
     if (!serial->isOpen())
     {
-        LOGC("BioSerialPro: Serial port not open!");
+        LOGC("InEarTeensy: Serial port not open!");
         return false;
     }
     
@@ -855,7 +855,7 @@ bool BioSerialProThread::updateBuffer()
     
     if (callCount % 500 == 1)
     {
-        LOGC("BioSerialPro: read() returned ", bytesRead, " bytes");
+        LOGC("InEarTeensy: read() returned ", bytesRead, " bytes");
     }
     
     if (bytesRead <= 0)
@@ -873,7 +873,7 @@ bool BioSerialProThread::updateBuffer()
         static int emptyCounter = 0;
         if (emptyCounter++ % 100 == 0)
         {
-            LOGC("BioSerialPro: parser returned 0 samples from ", bytesRead, " bytes");
+            LOGC("InEarTeensy: parser returned 0 samples from ", bytesRead, " bytes");
         }
         return true;
     }
@@ -881,7 +881,7 @@ bool BioSerialProThread::updateBuffer()
     static int logCounter = 0;
     if (logCounter++ % 1000 == 0)
     {
-        LOGC("BioSerialPro: Got ", samples.size(), " samples, bytesRead=", bytesRead, ", EEG[0]=", samples[0].eeg[0]);
+        LOGC("InEarTeensy: Got ", samples.size(), " samples, bytesRead=", bytesRead, ", EEG[0]=", samples[0].eeg[0]);
     }
     
     // Process each sample
@@ -898,12 +898,12 @@ bool BioSerialProThread::updateBuffer()
             initialTimestamp = Time::getMillisecondCounterHiRes();
         
         // Calculate timestamp for this sample
-        double ts = initialTimestamp + (totalSamples * 1000.0 / BioSerialPro::EEG_SAMPLE_RATE);
+        double ts = initialTimestamp + (totalSamples * 1000.0 / InEarTeensy::EEG_SAMPLE_RATE);
         
         // Store EEG data
-        for (int ch = 0; ch < BioSerialPro::NUM_EEG_CHANNELS; ch++)
+        for (int ch = 0; ch < InEarTeensy::NUM_EEG_CHANNELS; ch++)
         {
-            eegBuffer[eegSampleCount * BioSerialPro::NUM_EEG_CHANNELS + ch] = sample.eeg[ch];
+            eegBuffer[eegSampleCount * InEarTeensy::NUM_EEG_CHANNELS + ch] = sample.eeg[ch];
         }
         
         timestampBuffer[eegSampleCount] = ts;
@@ -914,9 +914,9 @@ bool BioSerialProThread::updateBuffer()
         totalSamples++;
         
         // Aux data (6 channels @ 1kHz - no decimation)
-        for (int ch = 0; ch < BioSerialPro::NUM_AUX_CHANNELS; ch++)
+        for (int ch = 0; ch < InEarTeensy::NUM_AUX_CHANNELS; ch++)
         {
-            auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + ch] = sample.aux[ch];
+            auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + ch] = sample.aux[ch];
         }
         auxSampleCount++;
         
@@ -976,12 +976,12 @@ bool BioSerialProThread::updateBuffer()
     return true;
 }
 
-void BioSerialProThread::generateSimulatedData()
+void InEarTeensyThread::generateSimulatedData()
 {
     // Calculate how many samples we should have generated by now
     auto now = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(now - simStartTime);
-    int64 targetSamples = (elapsed.count() * BioSerialPro::EEG_SAMPLE_RATE) / 1000000;
+    int64 targetSamples = (elapsed.count() * InEarTeensy::EEG_SAMPLE_RATE) / 1000000;
     
     int samplesToGenerate = (int)(targetSamples - totalSamples);
     if (samplesToGenerate <= 0)
@@ -1003,53 +1003,53 @@ void BioSerialProThread::generateSimulatedData()
     for (int i = 0; i < samplesToGenerate; i++)
     {
         // Generate EEG: Different frequency sine waves per channel
-        for (int ch = 0; ch < BioSerialPro::NUM_EEG_CHANNELS; ch++)
+        for (int ch = 0; ch < InEarTeensy::NUM_EEG_CHANNELS; ch++)
         {
             double freq = 3.0 + ch * 4.0;  // 3, 7, 11, 15, 19 Hz
             double amplitude = 100.0 * (1.0 + ch * 0.2);  // 100-180 µV
-            eegBuffer[i * BioSerialPro::NUM_EEG_CHANNELS + ch] = 
-                (float)(amplitude * sin(2.0 * M_PI * freq * simPhase / BioSerialPro::EEG_SAMPLE_RATE));
+            eegBuffer[i * InEarTeensy::NUM_EEG_CHANNELS + ch] = 
+                (float)(amplitude * sin(2.0 * M_PI * freq * simPhase / InEarTeensy::EEG_SAMPLE_RATE));
         }
         
-        timestampBuffer[i] = ts + (totalSamples + i) * 1000.0 / BioSerialPro::EEG_SAMPLE_RATE;
+        timestampBuffer[i] = ts + (totalSamples + i) * 1000.0 / InEarTeensy::EEG_SAMPLE_RATE;
         sampleNumbers[i] = totalSamples + i;
         eventWords[i] = 0;
         
         // Aux data: 9 channels matching protocol order
         // [0] AccelX: 0.5 Hz sway
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 0] = 
-            1000.0f * sin(2.0 * M_PI * 0.5 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 0] = 
+            1000.0f * sin(2.0 * M_PI * 0.5 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [1] AccelY: 0.7 Hz
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 1] = 
-            1000.0f * sin(2.0 * M_PI * 0.7 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 1] = 
+            1000.0f * sin(2.0 * M_PI * 0.7 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [2] AccelZ: 0.3 Hz + gravity
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 2] = 
-            16384.0f + 500.0f * sin(2.0 * M_PI * 0.3 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 2] = 
+            16384.0f + 500.0f * sin(2.0 * M_PI * 0.3 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [3] PPG_Red: 1.2 Hz (~72 BPM heartbeat)
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 3] = 
-            100000.0f + 5000.0f * sin(2.0 * M_PI * 1.2 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 3] = 
+            100000.0f + 5000.0f * sin(2.0 * M_PI * 1.2 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [4] PPG_IR: 1.2 Hz with different offset
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 4] = 
-            120000.0f + 6000.0f * sin(2.0 * M_PI * 1.2 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 4] = 
+            120000.0f + 6000.0f * sin(2.0 * M_PI * 1.2 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [5] PPG_Green: 1.2 Hz with different offset
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 5] = 
-            80000.0f + 4000.0f * sin(2.0 * M_PI * 1.2 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 5] = 
+            80000.0f + 4000.0f * sin(2.0 * M_PI * 1.2 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [6] Temperature: 0.05 Hz around 36.5°C (in centi-degrees)
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 6] = 
-            3650.0f + 50.0f * sin(2.0 * M_PI * 0.05 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 6] = 
+            3650.0f + 50.0f * sin(2.0 * M_PI * 0.05 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [7] Battery: 0.02 Hz around 4000mV
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 7] = 
-            4000.0f + 200.0f * sin(2.0 * M_PI * 0.02 * simPhase / BioSerialPro::EEG_SAMPLE_RATE);
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 7] = 
+            4000.0f + 200.0f * sin(2.0 * M_PI * 0.02 * simPhase / InEarTeensy::EEG_SAMPLE_RATE);
         
         // [8] Sync: slow pulse
-        auxBuffer[auxSampleCount * BioSerialPro::NUM_AUX_CHANNELS + 8] = 
+        auxBuffer[auxSampleCount * InEarTeensy::NUM_AUX_CHANNELS + 8] = 
             (fmod(simPhase, 1000.0) < 100) ? 1.0f : 0.0f;
         
         auxSampleCount++;
@@ -1080,7 +1080,7 @@ void BioSerialProThread::generateSimulatedData()
     totalSamples += samplesToGenerate;
 }
 
-void BioSerialProThread::setPort(const String& port)
+void InEarTeensyThread::setPort(const String& port)
 {
     if (port != portName)
     {
@@ -1089,12 +1089,12 @@ void BioSerialProThread::setPort(const String& port)
     }
 }
 
-void BioSerialProThread::setBaudRate(int rate)
+void InEarTeensyThread::setBaudRate(int rate)
 {
     baudRate = rate;
 }
 
-void BioSerialProThread::setSimulationMode(bool simulate)
+void InEarTeensyThread::setSimulationMode(bool simulate)
 {
     simulationMode = simulate;
     if (simulate)
@@ -1103,21 +1103,21 @@ void BioSerialProThread::setSimulationMode(bool simulate)
     }
 }
 
-bool BioSerialProThread::isConnected() const
+bool InEarTeensyThread::isConnected() const
 {
     return connected.load();
 }
 
-StringArray BioSerialProThread::getAvailablePorts() const
+StringArray InEarTeensyThread::getAvailablePorts() const
 {
-    return BioSerialPro::SerialPort::getAvailablePorts();
+    return InEarTeensy::SerialPort::getAvailablePorts();
 }
 
-bool BioSerialProThread::connect()
+bool InEarTeensyThread::connect()
 {
     if (portName.isEmpty())
     {
-        LOGC("BioSerialPro: No port specified");
+        LOGC("InEarTeensy: No port specified");
         return false;
     }
     
@@ -1130,8 +1130,10 @@ bool BioSerialProThread::connect()
     return false;
 }
 
-void BioSerialProThread::disconnect()
+void InEarTeensyThread::disconnect()
 {
     connected = false;
     serial->close();
 }
+
+

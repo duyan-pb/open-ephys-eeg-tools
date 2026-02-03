@@ -1,22 +1,22 @@
 /*
     ------------------------------------------------------------------
 
-    BioSerial-Pro Source Plugin for Open Ephys
+    InEar Teensy Source Plugin for Open Ephys
     
-    Editor UI for configuring the BioSerial-Pro data source.
+    Editor UI for configuring the InEar Teensy data source.
 
     ------------------------------------------------------------------
 */
 
-#ifndef BIOSERIAL_PRO_EDITOR_H
-#define BIOSERIAL_PRO_EDITOR_H
+#ifndef INEAR_TEENSY_EDITOR_H
+#define INEAR_TEENSY_EDITOR_H
 
 #include <EditorHeaders.h>
 
-class BioSerialProThread;
+class InEarTeensyThread;
 
 /**
- * Editor for the BioSerial-Pro Source plugin.
+ * Editor for the InEar Teensy Source plugin.
  * 
  * Provides UI controls for:
  * - Serial port selection
@@ -24,14 +24,14 @@ class BioSerialProThread;
  * - Simulation mode
  * - Statistics display
  */
-class BioSerialProEditor : public GenericEditor,
+class InEarTeensyEditor : public GenericEditor,
                            public ComboBox::Listener,
                            public Button::Listener,
                            public Timer
 {
 public:
-    BioSerialProEditor(GenericProcessor* parentNode, BioSerialProThread* thread);
-    ~BioSerialProEditor();
+    InEarTeensyEditor(GenericProcessor* parentNode, InEarTeensyThread* thread);
+    ~InEarTeensyEditor();
 
     /** Called when editor becomes visible */
     void resized() override;
@@ -46,7 +46,7 @@ public:
     void timerCallback() override;
 
 private:
-    BioSerialProThread* thread;
+    InEarTeensyThread* thread;
     
     // Port selection
     std::unique_ptr<ComboBox> portSelector;
@@ -72,7 +72,9 @@ private:
     /** Update the connect button state */
     void updateConnectButton();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BioSerialProEditor);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InEarTeensyEditor);
 };
 
-#endif // BIOSERIAL_PRO_EDITOR_H
+#endif // INEAR_TEENSY_EDITOR_H
+
+
