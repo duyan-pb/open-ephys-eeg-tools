@@ -7,6 +7,8 @@
 #include "OpenBCICytonThread.h"
 #include "OpenBCICytonEditor.h"
 
+#include <thread>
+
 #ifdef _WIN32
     #include <setupapi.h>
     #pragma comment(lib, "setupapi.lib")
@@ -617,11 +619,15 @@ bool OpenBCICytonThread::startAcquisition()
     isStreaming = true;
     LOGD("OpenBCICyton: Started streaming");
     
+    startThread();
+    
     return true;
 }
 
 bool OpenBCICytonThread::stopAcquisition()
 {
+    stopThread(1000);
+    
     if (!serialConnected || !isStreaming)
     {
         return false;
@@ -717,6 +723,11 @@ bool OpenBCICytonThread::updateBuffer()
     {
         // Append to buffer
         serialBuffer.insert(serialBuffer.end(), readBuffer, readBuffer + bytesRead);
+    }
+    else
+    {
+        // No data available, sleep briefly to avoid busy-waiting
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
     }
     
     // Process complete packets
