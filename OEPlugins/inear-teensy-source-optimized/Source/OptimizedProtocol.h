@@ -64,8 +64,8 @@ constexpr int SIZE_FOOTER = 3;
 constexpr float EEG_SCALE_UV = 0.0223517f;    // ADS1299 @ 24x gain: µV per count
 constexpr float ACCEL_SCALE_G = 0.000244f;    // ±8g range: G per count
 constexpr float PPG_SCALE = 1.0f;             // Raw counts
-constexpr float TEMP_SCALE = 0.0078125f;      // °C per count
-constexpr float BATTERY_SCALE = 0.001f;       // Volts per count
+constexpr float TEMP_SCALE = 0.01f;           // °C per count (firmware sends centi-degrees)
+constexpr float BATTERY_SCALE = 1.0f;         // mV per count (firmware sends mV)
 
 // =============================================================================
 // Packet Types (Enumerated)

@@ -149,6 +149,17 @@ public:
     uint64_t getFramingErrors() const { return framingErrors; }
     uint64_t getBytesReceived() const { return bytesReceived; }
     
+    /** Get packet size statistics */
+    int getMinPacketSize() const { return minPacketSize; }
+    int getMaxPacketSize() const { return maxPacketSize; }
+    double getAvgPacketSize() const { return (packetsReceived > 0) ? (double)totalPacketBytes / packetsReceived : 0.0; }
+    
+    /** Get packet type counts */
+    uint64_t getEegOnlyPackets() const { return eegOnlyPackets; }
+    uint64_t getEegAccelPackets() const { return eegAccelPackets; }
+    uint64_t getEegAccelPpgPackets() const { return eegAccelPpgPackets; }
+    uint64_t getFullPackets() const { return fullPackets; }
+    
     /** Get current sensor states */
     const SensorState& getAccelState() const { return accelState; }
     const SensorState& getPPGState() const { return ppgState; }
@@ -173,6 +184,17 @@ private:
     uint64_t checksumErrors = 0;
     uint64_t framingErrors = 0;
     uint64_t bytesReceived = 0;
+    
+    // Packet size tracking
+    int minPacketSize = INT_MAX;
+    int maxPacketSize = 0;
+    uint64_t totalPacketBytes = 0;
+    
+    // Packet type counters
+    uint64_t eegOnlyPackets = 0;      // Type 0: 26 bytes
+    uint64_t eegAccelPackets = 0;     // Type 1: 32 bytes  
+    uint64_t eegAccelPpgPackets = 0;  // Type 2: 50 bytes
+    uint64_t fullPackets = 0;         // Type 3: 55 bytes
     
     // Parsing helpers
     int findSyncPosition();
@@ -247,8 +269,15 @@ private:
     std::chrono::steady_clock::time_point streamStartTime;
     uint64_t sampleCount = 0;
     
+    // Bandwidth monitoring
+    std::chrono::steady_clock::time_point bandwidthStartTime;
+    uint64_t bandwidthBytes = 0;
+    uint64_t totalBytesReceived = 0;
+    std::chrono::steady_clock::time_point acquisitionStartTime;
+    int bandwidthLogIntervalSec = 5;  // Log every 5 seconds
+    
     // Simulation
-    std::atomic<bool> simulationMode{true};  // Default to simulation for testing
+    std::atomic<bool> simulationMode{false};  // Use real hardware by default
     double simPhase = 0.0;
     uint32_t simSampleNum = 0;
     
