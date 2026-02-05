@@ -13,6 +13,7 @@
 #include <cmath>
 #include <algorithm>
 #include <thread>
+#include <climits>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -551,6 +552,14 @@ std::vector<EEGSample> ProtocolParser::parse(const uint8_t* data, int numBytes)
     {
         EEGSample sample = parsePacket(packet);
         
+        // Log first few sequence counters for debugging startup
+        if (packetsReceived < 5)
+        {
+            LOGC("InEarTeensy: Packet #", packetsReceived, " seq=", (int)sample.counter, 
+                 " firstPacket=", firstPacket ? "true" : "false",
+                 " lastCounter=", (int)lastCounter);
+        }
+        
         // Check for dropped packets
         if (!firstPacket)
         {
@@ -559,7 +568,8 @@ std::vector<EEGSample> ProtocolParser::parse(const uint8_t* data, int numBytes)
             {
                 int dropped = (sample.counter - expectedCounter) & 0xFF;
                 droppedPackets += dropped;
-                LOGC("InEarTeensy: Dropped ", dropped, " packets");
+                LOGC("InEarTeensy: Dropped ", dropped, " packets (expected=", (int)expectedCounter, 
+                     " got=", (int)sample.counter, ")");
             }
         }
         
@@ -790,11 +800,24 @@ bool InEarTeensyThread::startAcquisition()
     initialTimestamp = -1.0;
     accelDecimationCounter = 0;
     
+    // Reset bandwidth monitoring
+    bandwidthStartTime = std::chrono::steady_clock::now();
+    acquisitionStartTime = bandwidthStartTime;
+    bandwidthBytes = 0;
+    totalBytesReceived = 0;
+    
+    // Reset packet size tracking
+    minPacketSize = INT_MAX;
+    maxPacketSize = 0;
+    totalPacketBytes = 0;
+    packetCount = 0;
+    
     if (simulationMode)
     {
         simPhase = 0.0;
         simStartTime = std::chrono::high_resolution_clock::now();
         LOGC("InEarTeensy: Starting acquisition (SIMULATION MODE)");
+        LOGC("InEarTeensy: Bandwidth monitoring enabled - logging every 5 seconds");
         startThread();  // Start the DataThread run() loop
         return true;
     }
@@ -812,32 +835,46 @@ bool InEarTeensyThread::startAcquisition()
     serial->flush();
     
     LOGC("InEarTeensy: Starting acquisition on ", portName.toStdString());
+    LOGC("InEarTeensy: Bandwidth monitoring enabled - logging every 5 seconds");
     startThread();  // Start the DataThread run() loop
     return true;
 }
 
 bool InEarTeensyThread::stopAcquisition()
 {
-    LOGC("InEarTeensy: Stopping acquisition");
+    LOGC("InEarTeensy: Stopping acquisition...");
     
     // Stop the DataThread run() loop
     stopThread(1000);
     
+    // Calculate total acquisition time
+    auto now = std::chrono::steady_clock::now();
+    auto totalDuration = std::chrono::duration_cast<std::chrono::seconds>(now - acquisitionStartTime).count();
+    double avgBandwidthKBps = (totalDuration > 0) ? (totalBytesReceived / 1024.0 / totalDuration) : 0.0;
+    
+    double avgPacketSize = (packetCount > 0) ? (double)totalPacketBytes / packetCount : 0.0;
+    
+    LOGC("InEarTeensy: ======== ACQUISITION SUMMARY ========");
+    LOGC("  Duration: ", totalDuration, " seconds");
+    LOGC("  Total bytes received: ", totalBytesReceived, " (", totalBytesReceived / 1024.0, " KB)");
+    LOGC("  Average bandwidth: ", avgBandwidthKBps, " KB/s");
+    LOGC("  --- Packet Statistics ---");
     LOGC("  Packets received: ", parser->getPacketsReceived());
-    LOGC("  Dropped packets: ", parser->getDroppedPackets());
+    LOGC("  Packets dropped: ", parser->getDroppedPackets());
     LOGC("  Checksum errors: ", parser->getChecksumErrors());
+    LOGC("  --- Packet Size Distribution ---");
+    LOGC("  Min packet size: ", (minPacketSize == INT_MAX ? 0 : minPacketSize), " bytes");
+    LOGC("  Max packet size: ", maxPacketSize, " bytes");
+    LOGC("  Avg packet size: ", avgPacketSize, " bytes");
+    LOGC("  --- Packet Type Breakdown ---");
+    LOGC("  Fixed (56 bytes): ", packetCount, " (100%)");
+    LOGC("InEarTeensy: =====================================");
     
     return true;
 }
 
 bool InEarTeensyThread::updateBuffer()
 {
-    static int callCount = 0;
-    if (callCount++ % 500 == 0)
-    {
-        LOGC("InEarTeensy: updateBuffer called, count=", callCount, ", simMode=", simulationMode);
-    }
-    
     if (simulationMode)
     {
         generateSimulatedData();
@@ -853,9 +890,39 @@ bool InEarTeensyThread::updateBuffer()
     // Read available data from serial port
     int bytesRead = serial->read(readBuffer.data(), READ_BUFFER_SIZE);
     
-    if (callCount % 500 == 1)
+    // Track bandwidth
+    if (bytesRead > 0)
     {
-        LOGC("InEarTeensy: read() returned ", bytesRead, " bytes");
+        bandwidthBytes += bytesRead;
+        totalBytesReceived += bytesRead;
+    }
+    
+    // Log bandwidth every 5 seconds
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - bandwidthStartTime).count();
+    if (elapsed >= bandwidthLogIntervalSec)
+    {
+        auto totalElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - acquisitionStartTime).count();
+        double bandwidthKBps = bandwidthBytes / 1024.0 / elapsed;
+        double avgBandwidthKBps = (totalElapsed > 0) ? (totalBytesReceived / 1024.0 / totalElapsed) : 0.0;
+        
+        double avgPacketSize = (packetCount > 0) ? (double)totalPacketBytes / packetCount : 0.0;
+        
+        LOGC("======== BANDWIDTH REPORT (t=", totalElapsed, "s) ========");
+        LOGC("  Current: ", bandwidthKBps, " KB/s (", bandwidthBytes, " bytes in ", elapsed, "s)");
+        LOGC("  Average: ", avgBandwidthKBps, " KB/s (", totalBytesReceived / 1024.0, " KB total)");
+        LOGC("  Packets: ", parser->getPacketsReceived(), " received, ", parser->getDroppedPackets(), " dropped");
+        if (packetCount > 0)
+        {
+            LOGC("  Packet sizes: min=", (minPacketSize == INT_MAX ? 0 : minPacketSize), ", max=", maxPacketSize, 
+                 ", avg=", avgPacketSize, " bytes");
+            LOGC("  Types: Fixed(56B)=", packetCount);
+        }
+        LOGC("================================================");
+        
+        // Reset interval counter
+        bandwidthStartTime = now;
+        bandwidthBytes = 0;
     }
     
     if (bytesRead <= 0)
@@ -868,20 +935,19 @@ bool InEarTeensyThread::updateBuffer()
     // Parse packets
     auto samples = parser->parse(readBuffer.data(), bytesRead);
     
-    if (samples.empty())
+    // Track packet sizes (fixed 56 bytes for this protocol)
+    for (size_t i = 0; i < samples.size(); i++)
     {
-        static int emptyCounter = 0;
-        if (emptyCounter++ % 100 == 0)
-        {
-            LOGC("InEarTeensy: parser returned 0 samples from ", bytesRead, " bytes");
-        }
-        return true;
+        int pktSize = InEarTeensy::PACKET_SIZE;  // Always 56 bytes
+        if (pktSize < minPacketSize) minPacketSize = pktSize;
+        if (pktSize > maxPacketSize) maxPacketSize = pktSize;
+        totalPacketBytes += pktSize;
+        packetCount++;
     }
     
-    static int logCounter = 0;
-    if (logCounter++ % 1000 == 0)
+    if (samples.empty())
     {
-        LOGC("InEarTeensy: Got ", samples.size(), " samples, bytesRead=", bytesRead, ", EEG[0]=", samples[0].eeg[0]);
+        return true;
     }
     
     // Process each sample

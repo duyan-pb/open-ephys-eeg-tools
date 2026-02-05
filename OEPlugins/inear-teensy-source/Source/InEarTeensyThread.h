@@ -266,6 +266,19 @@ private:
     double initialTimestamp = -1.0;
     std::chrono::high_resolution_clock::time_point simStartTime;
     
+    // Bandwidth monitoring
+    std::chrono::steady_clock::time_point bandwidthStartTime;
+    std::chrono::steady_clock::time_point acquisitionStartTime;
+    uint64_t bandwidthBytes = 0;
+    uint64_t totalBytesReceived = 0;
+    int bandwidthLogIntervalSec = 5;  // Log every 5 seconds
+    
+    // Packet size tracking (for consistent logging with optimized version)
+    int minPacketSize = INT_MAX;
+    int maxPacketSize = 0;
+    uint64_t totalPacketBytes = 0;
+    uint64_t packetCount = 0;
+    
     // Status
     std::atomic<bool> connected{false};
     

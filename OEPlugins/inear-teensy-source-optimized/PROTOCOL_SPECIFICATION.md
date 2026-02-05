@@ -20,14 +20,16 @@ Technical specification for the InEar Teensy **Optimized** variable-length packe
 
 ## 1. Overview
 
-The Optimized Protocol is a variable-length binary streaming protocol designed for efficient real-time EEG acquisition. It reduces bandwidth by ~40% compared to the original fixed-length protocol by only transmitting auxiliary sensor data at their native sample rates.
+The Optimized Protocol is a variable-length binary streaming protocol designed for efficient real-time EEG acquisition. It reduces bandwidth by ~49% compared to the original fixed-length protocol by only transmitting auxiliary sensor data at their native sample rates.
 
 | Parameter | Value |
 |-----------|-------|
 | **Sample Rate** | 1000 Hz (EEG base rate) |
 | **Packet Size** | 26-55 bytes (variable) |
 | **Baud Rate** | 2,000,000 (2 Mbaud) |
-| **Avg Bandwidth** | ~33 KB/s (vs 56 KB/s original) |
+| **Avg Bandwidth** | ~28.5 KB/s (measured) |
+| **Original Bandwidth** | 54.7 KB/s |
+| **Savings** | ~49% |
 | **Latency** | < 1 ms (single packet) |
 
 ---
@@ -43,8 +45,8 @@ The Optimized Protocol is a variable-length binary streaming protocol designed f
 | Packet Type Field | None | Enumerated byte |
 | Sequence Number | Counter at end | In header |
 | Timestamp | 4 bytes | 4 bytes (microseconds) |
-| Average Bandwidth | 56,000 bytes/sec | ~33,000 bytes/sec |
-| Bandwidth Savings | - | ~40% |
+| Average Bandwidth | 54,700 bytes/sec | ~28,500 bytes/sec |
+| Bandwidth Savings | - | ~49% |
 
 ### Why Variable Length?
 

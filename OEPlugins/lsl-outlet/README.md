@@ -1,6 +1,6 @@
-# LSL Outlet Plugin (Standalone)
+# LSL Outlet Plugin for Open Ephys
 
-A standalone Open Ephys plugin that streams data via Lab Streaming Layer (LSL) to external applications.
+A standalone Open Ephys plugin that streams data via Lab Streaming Layer (LSL) to external applications like Python, MATLAB, or LabRecorder.
 
 ## Features
 
@@ -13,23 +13,20 @@ A standalone Open Ephys plugin that streams data via Lab Streaming Layer (LSL) t
 ## Installation
 
 ### Prerequisites
-- Open Ephys GUI (built from source or with development headers)
+- Open Ephys GUI (plugin-GUI)
 - CMake 3.15+
 - Visual Studio 2022 (Windows) or GCC/Clang (Linux/macOS)
 
 ### Build
 
 ```bash
-cd lsl-outlet/Build
-
-# Windows
+cd Build
 cmake -G "Visual Studio 17 2022" -A x64 ..
-cmake --build . --config Release --target install
+cmake --build . --config Release
 
-# Linux/macOS
-cmake ..
-make -j4
-make install
+# Deploy (requires admin)
+Copy-Item "Release\lsl-outlet.dll" "C:\Program Files\Open Ephys\plugins\" -Force
+Copy-Item "libs\windows\bin\lsl.dll" "C:\Program Files\Open Ephys\shared\" -Force
 ```
 
 ## Usage
@@ -42,9 +39,13 @@ make install
 3. Press Play to start streaming
 4. Connect from external applications using LSL
 
-### Receiving Data
+### Signal Chain Example
 
-The plugin creates LSL outlets that can be discovered by any LSL-compatible application:
+```
+[InEar Teensy Opt] → [Bandpass Filter] → [LSL Outlet] → [LFP Viewer]
+```
+
+### Receiving Data in Python
 
 ```python
 import pylsl
@@ -64,7 +65,7 @@ while True:
 ### LSL Stream Details
 
 **Data Streams:**
-- Name: `{StreamName}_{DataStreamName}` (e.g., "OpenEphys_Rhythm_FPGA")
+- Name: `{StreamName}_{DataStreamName}` (e.g., "OpenEphys_InEarTeensyEEG")
 - Type: As configured (default: "EEG")
 - Format: float32, interleaved
 - Metadata: Channel labels, units, acquisition info
@@ -79,9 +80,10 @@ while True:
 
 Settings are automatically saved/loaded with your Open Ephys signal chain configuration.
 
-## Version History
+## Dependencies
 
-- **v1.0.0** - Initial standalone release
-  - Continuous data streaming
-  - TTL marker support
-  - Parameter persistence
+This plugin requires `lsl.dll` (Windows) or `liblsl.so` (Linux) to be in the Open Ephys shared folder.
+
+## License
+
+MIT License - See Open Ephys plugin guidelines.

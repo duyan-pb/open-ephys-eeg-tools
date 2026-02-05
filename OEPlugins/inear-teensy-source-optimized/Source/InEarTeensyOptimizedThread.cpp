@@ -12,6 +12,7 @@
 #include "InEarTeensyOptimizedEditor.h"
 #include <cmath>
 #include <algorithm>
+#include <climits>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -336,6 +337,17 @@ void OptimizedProtocolParser::reset()
     checksumErrors = 0;
     framingErrors = 0;
     bytesReceived = 0;
+    
+    // Reset packet size tracking
+    minPacketSize = INT_MAX;
+    maxPacketSize = 0;
+    totalPacketBytes = 0;
+    
+    // Reset packet type counters
+    eegOnlyPackets = 0;
+    eegAccelPackets = 0;
+    eegAccelPpgPackets = 0;
+    fullPackets = 0;
 }
 
 int OptimizedProtocolParser::findSyncPosition()
@@ -593,6 +605,30 @@ bool OptimizedProtocolParser::tryParsePacket(OptimizedSample& sample)
     // Remove parsed packet from buffer
     for (int i = 0; i < expectedSize; i++)
         buffer.pop_front();
+    
+    // Track packet size statistics
+    if (expectedSize < minPacketSize) minPacketSize = expectedSize;
+    if (expectedSize > maxPacketSize) maxPacketSize = expectedSize;
+    totalPacketBytes += expectedSize;
+    
+    // Track packet type counts (group by base data content)
+    uint8_t baseType = static_cast<uint8_t>(pktType) & 0x0F;  // Remove marker flag
+    switch (baseType)
+    {
+        case 0x00:  // EEG_ONLY
+            eegOnlyPackets++; 
+            break;
+        case 0x01:  // EEG_ACCEL
+            eegAccelPackets++; 
+            break;
+        case 0x02:  // EEG_PPG
+        case 0x03:  // EEG_ACCEL_PPG
+            eegAccelPpgPackets++; 
+            break;
+        default:    // EEG_HEALTH, EEG_ACCEL_HEALTH, EEG_FULL_SYNC, etc.
+            fullPackets++; 
+            break;
+    }
     
     packetsReceived++;
     return true;
@@ -893,9 +929,23 @@ bool InEarTeensyOptimizedThread::stopAcquisition()
     LOGC("  Duration: ", totalDuration, " seconds");
     LOGC("  Total bytes received: ", totalBytesReceived, " (", totalBytesReceived / 1024.0, " KB)");
     LOGC("  Average bandwidth: ", avgBandwidthKBps, " KB/s");
+    LOGC("  --- Packet Statistics ---");
     LOGC("  Packets received: ", parser.getPacketsReceived());
     LOGC("  Packets dropped: ", parser.getPacketsDropped());
     LOGC("  Checksum errors: ", parser.getChecksumErrors());
+    LOGC("  --- Packet Size Distribution ---");
+    LOGC("  Min packet size: ", parser.getMinPacketSize(), " bytes");
+    LOGC("  Max packet size: ", parser.getMaxPacketSize(), " bytes");
+    LOGC("  Avg packet size: ", parser.getAvgPacketSize(), " bytes");
+    LOGC("  --- Packet Type Breakdown ---");
+    LOGC("  EEG-only (26 bytes):      ", parser.getEegOnlyPackets(), " (", 
+         (parser.getPacketsReceived() > 0 ? 100.0 * parser.getEegOnlyPackets() / parser.getPacketsReceived() : 0), "%)");
+    LOGC("  EEG+Accel (32 bytes):     ", parser.getEegAccelPackets(), " (",
+         (parser.getPacketsReceived() > 0 ? 100.0 * parser.getEegAccelPackets() / parser.getPacketsReceived() : 0), "%)");
+    LOGC("  EEG+Accel+PPG (50 bytes): ", parser.getEegAccelPpgPackets(), " (",
+         (parser.getPacketsReceived() > 0 ? 100.0 * parser.getEegAccelPpgPackets() / parser.getPacketsReceived() : 0), "%)");
+    LOGC("  Full (55 bytes):          ", parser.getFullPackets(), " (",
+         (parser.getPacketsReceived() > 0 ? 100.0 * parser.getFullPackets() / parser.getPacketsReceived() : 0), "%)");
     LOGC("OptimizedThread: =====================================");
     return true;
 }
@@ -1035,11 +1085,38 @@ bool InEarTeensyOptimizedThread::updateBuffer()
     uint8_t readBuffer[4096];
     int bytesRead = readFromSerial(readBuffer, sizeof(readBuffer));
     
-    static int logCounter = 0;
-    if (logCounter++ % 500 == 0)
+    // Track bandwidth
+    if (bytesRead > 0)
     {
-        LOGC("OptimizedThread: updateBuffer called, bytesRead=", bytesRead, 
-             ", serialConnected=", serialConnected, ", simulationMode=", simulationMode.load());
+        bandwidthBytes += bytesRead;
+        totalBytesReceived += bytesRead;
+    }
+    
+    // Log bandwidth every 5 seconds
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - bandwidthStartTime).count();
+    if (elapsed >= bandwidthLogIntervalSec)
+    {
+        auto totalElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - acquisitionStartTime).count();
+        double bandwidthKBps = bandwidthBytes / 1024.0 / elapsed;
+        double avgBandwidthKBps = (totalElapsed > 0) ? (totalBytesReceived / 1024.0 / totalElapsed) : 0.0;
+        
+        LOGC("======== BANDWIDTH REPORT (t=", totalElapsed, "s) ========");
+        LOGC("  Current: ", bandwidthKBps, " KB/s (", bandwidthBytes, " bytes in ", elapsed, "s)");
+        LOGC("  Average: ", avgBandwidthKBps, " KB/s (", totalBytesReceived / 1024.0, " KB total)");
+        LOGC("  Packets: ", parser.getPacketsReceived(), " received, ", parser.getPacketsDropped(), " dropped");
+        if (parser.getPacketsReceived() > 0)
+        {
+            LOGC("  Packet sizes: min=", parser.getMinPacketSize(), ", max=", parser.getMaxPacketSize(), 
+                 ", avg=", parser.getAvgPacketSize(), " bytes");
+            LOGC("  Types: EEG=", parser.getEegOnlyPackets(), ", +Accel=", parser.getEegAccelPackets(),
+                 ", +PPG=", parser.getEegAccelPpgPackets(), ", Full=", parser.getFullPackets());
+        }
+        LOGC("================================================");
+        
+        // Reset interval counter
+        bandwidthStartTime = now;
+        bandwidthBytes = 0;
     }
     
     if (bytesRead <= 0)
@@ -1050,14 +1127,6 @@ bool InEarTeensyOptimizedThread::updateBuffer()
     
     // Parse packets
     auto samples = parser.parse(readBuffer, bytesRead);
-    
-    if (logCounter % 500 == 1)
-    {
-        LOGC("OptimizedThread: Parsed ", samples.size(), " samples from ", bytesRead, " bytes");
-        LOGC("  Parser stats: received=", parser.getPacketsReceived(), 
-             ", dropped=", parser.getPacketsDropped(), 
-             ", checksumErrors=", parser.getChecksumErrors());
-    }
     
     // Add parsed samples to buffer
     for (const auto& sample : samples)
