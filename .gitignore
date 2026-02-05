@@ -54,3 +54,7 @@ Testing/
 
 # Keep important Build outputs tracked via specific includes if needed
 !**/libs/
+
+# Include pre-built releases for distribution
+!OEPlugins/releases/
+!OEPlugins/releases/*.dll
