@@ -134,8 +134,8 @@
 \newcommand{\tactic}[1]{\textbf{#1}}
 \newcommand{\proto}[1]{\textsc{#1}}
 \newcommand{\hexval}[1]{\texttt{0x#1}}
-\newcommand{\freewin}{\textcolor{okgreen}{\ding{51}\,Free Win}}
-\newcommand{\implemented}{\textcolor{codeblue}{\ding{51}\,Implemented}}
+\newcommand{\freewin}{\texorpdfstring{\textcolor{okgreen}{\ding{51}\,Free Win}}{(Free Win)}}
+\newcommand{\implemented}{\texorpdfstring{\textcolor{codeblue}{\ding{51}\,Implemented}}{(Implemented)}}
 \newcommand{\metricdown}{\textcolor{okgreen}{$\blacktriangledown$}}
 \newcommand{\metricup}{\textcolor{warnred}{$\blacktriangle$}}
 \newcommand{\metriceq}{\textcolor{codegray}{$=$}}
@@ -199,6 +199,7 @@ OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
 \end{titlepage}
 
 % --- Table of Contents ---
+\setcounter{page}{1}
 \tableofcontents
 \newpage
 
@@ -213,7 +214,7 @@ This document analyzes three EEG streaming protocols used in the Open Ephys ecos
 \caption{Protocol overview comparison}
 \label{tab:executive-summary}
 \small
-\begin{tabularx}{\textwidth}{l C{3.2cm} C{3.2cm} C{3.2cm}}
+\begin{tabularx}{\textwidth}{l X X X}
 \toprule
 & \textbf{OpenBCI Cyton} & \textbf{InEar Original} & \textbf{InEar Optimized} \\
 \midrule
@@ -279,7 +280,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=0.95em, bitheight=2.5em]{33}
+\begin{bytefield}[bitwidth=0.88em, bitheight=2.5em]{33}
     \bitheader{0,1,2,4,7,10,13,16,19,22,25,26,32} \\
     \bitbox{1}{\tiny\texttt{0xA0}\\START} &
     \bitbox{1}{\tiny SEQ} &
@@ -314,7 +315,7 @@ No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ s
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=0.65em, bitheight=2.5em]{56}
+\begin{bytefield}[bitwidth=0.60em, bitheight=2.5em]{56}
     \bitheader{0,2,6,7,22,28,46,48,50,52,53,54} \\
     \bitbox{2}{\tiny START\\A5\,5A} &
     \bitbox{4}{\tiny TIMESTAMP} &
@@ -384,7 +385,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=1.3em, bitheight=2.5em]{26}
+\begin{bytefield}[bitwidth=1.2em, bitheight=2.5em]{26}
     \bitheader{0,2,3,4,8,23,24,25} \\
     \bitbox{2}{\tiny START\\A5\,5A} &
     \bitbox{1}{\tiny TYPE\\\hexval{00}} &
@@ -401,7 +402,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=1.1em, bitheight=2.5em]{32}
+\begin{bytefield}[bitwidth=1.0em, bitheight=2.5em]{32}
     \bitheader{0,2,3,4,8,23,29,30,31} \\
     \bitbox{2}{\tiny START} &
     \bitbox{1}{\tiny TYPE\\\hexval{01}} &
@@ -419,7 +420,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=0.67em, bitheight=2.5em]{54}
+\begin{bytefield}[bitwidth=0.62em, bitheight=2.5em]{54}
     \bitheader{0,2,3,4,8,23,29,47,49,51,52,53} \\
     \bitbox{2}{\tiny ST} &
     \bitbox{1}{\tiny T\\\hexval{06}} &
@@ -493,7 +494,7 @@ Timestamp & Via aux (optional) & 4 bytes & 4 bytes \\
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{l R{1.2cm} R{1.2cm} R{1.5cm} R{1.5cm} R{1.5cm}}
+\begin{tabular}{l R{1.2cm} R{1.2cm} R{1.5cm} R{1.6cm} R{1.5cm}}
 \toprule
 \textbf{Protocol} & \textbf{EEG} & \textbf{Aux} & \textbf{Payload} & \textbf{Overhead} & \textbf{Ovh.\,\%} \\
 \midrule
@@ -1036,7 +1037,8 @@ Teensy~4.1 (ARM Cortex-M7, 600\,MHz) supports up to 6\,Mbaud.
 \caption{Wire time at various baud rates}
 \end{table}
 
-\textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits, cable quality critical at $>$3\,Mbaud. Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.
+\textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits, cable quality critical at $>$3\,Mbaud.
+Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.
 
 % --- 2C ---
 \subsubsection{2C --- USB Flush Optimization}
@@ -1052,7 +1054,7 @@ Serial.send_now();  // Force immediate USB transfer
 \textbf{Verdict}: Easy win --- single line of code, removes up to 1\,ms of non-deterministic latency. Currently \textbf{not implemented} in the firmware.
 
 % --- 2D ---
-\subsubsection{2D --- DMA SPI$\to$UART Pipeline}
+\subsubsection{\texorpdfstring{2D --- DMA SPI\textrightarrow UART Pipeline}{2D --- DMA SPI to UART Pipeline}}
 
 Use Direct Memory Access hardware to transfer data from ADS1299 SPI bus directly to UART without CPU involvement.
 
@@ -1354,7 +1356,7 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 {
 \setlength{\tabcolsep}{3pt}
 \tiny
-\begin{longtable}{l C{1.5cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.2cm} C{1.5cm} C{1.5cm}}
+\begin{longtable}{l C{1.5cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.5cm} C{1.5cm}}
 \caption{Full 28-tactic trade-off matrix} \label{tab:full-matrix} \\
 \toprule
 \textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\
@@ -1657,7 +1659,7 @@ These tactics improve at least one metric without meaningfully hurting any other
 
 \begin{table}[H]
 \centering
-\begin{tabularx}{\textwidth}{c c l c X}
+\begin{tabularx}{\textwidth}{c c l l X}
 \toprule
 \textbf{Priority} & \textbf{ID} & \textbf{Tactic} & \textbf{Effort} & \textbf{Benefit} \\
 \midrule
@@ -1903,7 +1905,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional marker block (+1\,byte). Present when type has \hexval{10} flag set.}
 \label{tab:opt-marker}
 \small
-\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\begin{tabular}{R{1.3cm} R{0.8cm} l l l}
 \toprule
 \textbf{Offset*} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
 \midrule
@@ -1918,7 +1920,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional accelerometer block (+6\,bytes). Types: \hexval{01}, \hexval{03}, \hexval{05}, \hexval{06}.}
 \label{tab:opt-accel}
 \small
-\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\begin{tabular}{R{1.3cm} R{0.8cm} l l l}
 \toprule
 \textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
 \midrule
@@ -1936,7 +1938,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional PPG block (+18\,bytes). Types: \hexval{02}, \hexval{03}, \hexval{06}.}
 \label{tab:opt-ppg}
 \small
-\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\begin{tabular}{R{1.3cm} R{0.8cm} l l l}
 \toprule
 \textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
 \midrule
@@ -1954,7 +1956,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional health block (+4\,bytes). Types: \hexval{04}, \hexval{05}, \hexval{06}.}
 \label{tab:opt-health}
 \small
-\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\begin{tabular}{R{1.3cm} R{0.8cm} l l l}
 \toprule
 \textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
 \midrule
@@ -1995,7 +1997,7 @@ For quick reference, these are the \textbf{absolute byte offsets} for every pack
 \caption{Absolute offset map for each optimized packet type (no marker)}
 \label{tab:opt-concrete-offsets}
 \scriptsize
-\begin{tabular}{l C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm}}
+\begin{tabular}{l C{1.4cm} C{1.4cm} C{1.4cm} C{1.4cm} C{1.4cm} C{1.4cm} C{1.4cm}}
 \toprule
 \textbf{Block} & \textbf{\hexval{00}} & \textbf{\hexval{01}} & \textbf{\hexval{02}} & \textbf{\hexval{03}} & \textbf{\hexval{04}} & \textbf{\hexval{05}} & \textbf{\hexval{06}} \\
 & \tiny EEG & \tiny EEG+Acc & \tiny EEG+PPG & \tiny EEG+A+P & \tiny EEG+Hlt & \tiny EEG+A+H & \tiny Full \\
@@ -2030,7 +2032,7 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 \setlength{\tabcolsep}{3pt}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
-\begin{longtable}{l C{1.6cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.2cm} C{1.5cm} C{1.5cm}}
+\begin{longtable}{l C{1.6cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.5cm} C{1.5cm}}
 \caption{All 28 optimization tactics --- trade-off matrix} \label{tab:tactic-quick-ref} \\
 \toprule
 \textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\
@@ -2354,12 +2356,5 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 
 \end{longtable}
 }
-
-\vfill
-\begin{center}
-\rule{0.5\textwidth}{0.4pt}\\[0.5em]
-{\small\itshape Generated from analysis of the \texttt{open-ephys-eeg-tools} repository ---\\
-OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
-\end{center}
 
 \end{document}
