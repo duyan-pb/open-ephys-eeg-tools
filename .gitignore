@@ -52,6 +52,14 @@ Testing/
 # Logs
 *.log
 
+# LaTeX build artifacts
+*.aux
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.toc
+
 # Keep important Build outputs tracked via specific includes if needed
 !**/libs/
 
