@@ -76,12 +76,12 @@ Supplementary sensor data sampled synchronously with EEG.
 
 **Sensor Details:**
 
-- **Accelerometer (ICM-20948 or similar)**
-  - Range: ±2g, ±4g, ±8g, ±16g (configured at ±2g)
-  - LSB: 16384 counts/g at ±2g
-  - Bandwidth: 500 Hz
+- **Accelerometer (ADXL345 or similar)**
+  - Range: ±2g, ±4g, ±8g, ±16g (configured at ±16g)
+  - 13-bit resolution in full-range mode
+  - SPI interface at 5 MHz
 
-- **PPG (MAX30102 or similar)**
+- **PPG (MAX30105 or similar)**
   - 3-wavelength optical sensor
   - Red: 660 nm, IR: 880 nm, Green: 530 nm
   - 18-bit ADC, packed as 48-bit big-endian
@@ -200,7 +200,7 @@ Byte 5: LSB (least significant)
 Value = (Byte0 << 40) | (Byte1 << 32) | (Byte2 << 24) | (Byte3 << 16) | (Byte4 << 8) | Byte5
 ```
 
-Unsigned. The MAX30102 ADC is 18-bit, so upper bytes are typically zero.
+Unsigned. The MAX30105 ADC is 18-bit, so upper bytes are typically zero.
 
 ### 4.5 Temp/Battery/Sync Encoding (16-bit, Big-Endian)
 
@@ -235,7 +235,7 @@ At 1000 Hz, wraps every ~49.7 days.
 | Marker | 1 | Event tagging for experiments |
 | EEG (5 × 3B) | 15 | Full 24-bit resolution from ADS1299 |
 | Accel (3 × 2B) | 6 | 16-bit sufficient for accelerometer |
-| PPG (3 × 6B) | 18 | 48-bit packed from MAX30102 |
+| PPG (3 × 6B) | 18 | 48-bit packed from MAX30105 |
 | Temp | 2 | 16-bit temperature |
 | Battery | 2 | 16-bit battery voltage |
 | Sync | 2 | 16-bit sync marker |

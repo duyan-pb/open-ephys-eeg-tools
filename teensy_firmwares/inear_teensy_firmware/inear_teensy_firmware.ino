@@ -236,7 +236,7 @@ void buildPacket() {
 
 void readRealSensorData() {
     // Placeholder for real hardware reading
-    // This would interface with ADS1299, ADXL, MAX30102, etc.
+    // This would interface with ADS1299, ADXL345, MAX30105, etc.
     memset(packetBuffer + 7, 0, 45);  // Zero out data portion
 }
 

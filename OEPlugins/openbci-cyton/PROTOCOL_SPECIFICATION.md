@@ -55,12 +55,12 @@ OpenBCI Cyton is a wireless EEG streaming protocol using RFDuino radio modules. 
 | MCU | PIC32MX250F128B | Main processor, protocol handling |
 | ADC | ADS1299 | 8-channel 24-bit EEG analog front-end |
 | Accelerometer | LIS3DH | 3-axis accelerometer, ±4g range |
-| Radio | RFDuino (nRF51822) | 2.4 GHz wireless (Nordic Gazelle) |
+| Radio | RFduino (nRF51822) | 2.4 GHz wireless (Nordic Gazell) |
 | SD Card | MicroSD (optional) | Local data logging |
 
 ### 2.3 Radio Protocol
 
-The RFDuino modules use the Nordic Gazelle protocol stack:
+The RFduino modules use the Nordic Gazell protocol stack:
 
 - **Frequency**: 2.4 GHz ISM band
 - **Channels**: 1-25 (configurable)
@@ -705,4 +705,4 @@ bool stopStreaming() {
 2. [OpenBCI Cyton SDK](https://docs.openbci.com/Cyton/CytonSDK/)
 3. [ADS1299 Datasheet](https://www.ti.com/product/ADS1299)
 4. [LIS3DH Datasheet](https://www.st.com/resource/en/datasheet/lis3dh.pdf)
-5. [Nordic Gazelle Protocol](https://infocenter.nordicsemi.com/topic/sdk_nrf5_v17.1.0/lib_gazelle.html)
+5. [Nordic Gazell Protocol](https://infocenter.nordicsemi.com/topic/sdk_nrf5_v17.1.0/lib_gazelle.html)

@@ -31,7 +31,7 @@ All firmware requires:
 
 Optional sensors:
 - Accelerometer (ADXL345 or similar)
-- PPG sensor (MAX30102)
+- PPG sensor (MAX30105, 3 LEDs: Red/IR/Green)
 - Temperature sensor
 - Battery voltage monitor
 

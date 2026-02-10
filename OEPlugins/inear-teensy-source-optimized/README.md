@@ -137,7 +137,7 @@ The plugin logs bandwidth statistics every 5 seconds:
 - Teensy 4.0/4.1 microcontroller
 - ADS1299 EEG analog front-end
 - ADXL345 accelerometer (optional)
-- MAX30102 PPG sensor (optional)
+- MAX30105 PPG sensor (optional, 3 LEDs: Red/IR/Green)
 - USB connection to PC (2 Mbaud)
 
 ## License

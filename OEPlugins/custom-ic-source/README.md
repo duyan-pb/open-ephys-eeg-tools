@@ -90,7 +90,7 @@ The scale factor converts raw ADC values to microvolts:
 ```
 
 **Common scale factors:**
-- **ADS1299** (24-bit, ±4.5V, gain=24): `0.195` μV/LSB
+- **ADS1299** (24-bit, ±4.5V, gain=24): `0.02235` μV/LSB
 - **Generic 16-bit** (±5V): `152.6` μV/LSB (5V / 32768)
 
 ## Customizing the Protocol
@@ -124,7 +124,7 @@ For TI ADS1299 EEG AFE:
 | Channels | 8 |
 | Sample Rate | 250 Hz |
 | Data Format | int24 |
-| Scale Factor | 0.195 |
+| Scale Factor | 0.02235 |
 | Baud Rate | 921600 |
 
 ## Troubleshooting

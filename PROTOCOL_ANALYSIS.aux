@@ -1,0 +1,233 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Overview}{1}{section.1}\protected@file@percent }
+\newlabel{sec:executive-summary}{{1}{1}{Overview}{section.1}{}}
+\newlabel{sec:executive-summary@cref}{{[section][1][]1}{[1][1][]1}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Protocol overview comparison}}{1}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:executive-summary}{{1}{1}{Protocol overview comparison}{table.caption.1}{}}
+\newlabel{tab:executive-summary@cref}{{[table][1][]1}{[1][1][]1}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}The Three Protocols}{1}{section.2}\protected@file@percent }
+\newlabel{sec:three-protocols}{{2}{1}{The Three Protocols}{section.2}{}}
+\newlabel{sec:three-protocols@cref}{{[section][2][]2}{[1][1][]1}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}OpenBCI Cyton}{1}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}InEar Teensy Original}{1}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}InEar Teensy Optimized}{1}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}What The Packets Look Like}{2}{section.3}\protected@file@percent }
+\newlabel{sec:packet-structures}{{3}{2}{What The Packets Look Like}{section.3}{}}
+\newlabel{sec:packet-structures@cref}{{[section][3][]3}{[1][1][]2}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}OpenBCI Cyton --- 33 Bytes}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces OpenBCI Cyton packet structure (33 bytes)}}{2}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:openbci-packet}{{1}{2}{OpenBCI Cyton packet structure (33 bytes)}{figure.caption.2}{}}
+\newlabel{fig:openbci-packet@cref}{{[figure][1][]1}{[1][1][]2}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}InEar Teensy Original --- 56 Bytes}{2}{subsection.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter.}}{2}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:inear-original-packet}{{2}{2}{InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter}{figure.caption.3}{}}
+\newlabel{fig:inear-original-packet@cref}{{[figure][2][]2}{[1][2][]2}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces InEar Original field descriptions}}{2}{table.caption.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}InEar Teensy Optimized --- 26 to 55 Bytes}{2}{subsection.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Multi-rate sensor scheduling in the optimized protocol}}{3}{table.caption.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces EEG-only packet (Type \texttt  {0x00}) --- 749 per second}}{3}{figure.caption.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces EEG + Accelerometer packet (Type \texttt  {0x01}) --- 200 per second}}{3}{figure.caption.7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Full sync packet (Type \texttt  {0x06}) --- 1 per second}}{3}{figure.caption.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Optimized protocol packet type reference}}{3}{table.caption.9}\protected@file@percent }
+\newlabel{tab:packet-types}{{4}{3}{Optimized protocol packet type reference}{table.caption.9}{}}
+\newlabel{tab:packet-types@cref}{{[table][4][]4}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}What's Actually In Each Packet}{3}{section.4}\protected@file@percent }
+\newlabel{sec:data-content}{{4}{3}{What's Actually In Each Packet}{section.4}{}}
+\newlabel{sec:data-content@cref}{{[section][4][]4}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Side-by-Side Sensor Comparison}{4}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Sensor data carried by each protocol}}{4}{table.caption.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Useful Payload Per Sample}{4}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Payload vs.\ overhead per sample}}{4}{table.caption.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}The PPG Problem}{4}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}If OpenBCI Had The Same Sensors}{4}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Bandwidth Math}{5}{section.5}\protected@file@percent }
+\newlabel{sec:bandwidth}{{5}{5}{Bandwidth Math}{section.5}{}}
+\newlabel{sec:bandwidth@cref}{{[section][5][]5}{[1][4][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Serial 8-N-1 Basics}{5}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Bandwidth Table}{5}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Bandwidth utilization comparison}}{5}{table.caption.12}\protected@file@percent }
+\newlabel{tab:bandwidth}{{7}{5}{Bandwidth utilization comparison}{table.caption.12}{}}
+\newlabel{tab:bandwidth@cref}{{[table][7][]7}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Headroom}{5}{subsection.5.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Bandwidth utilization comparison (bar chart). Each bar represents the percentage of the serial link capacity used.}}{5}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:headroom}{{6}{5}{Bandwidth utilization comparison (bar chart). Each bar represents the percentage of the serial link capacity used}{figure.caption.13}{}}
+\newlabel{fig:headroom@cref}{{[figure][6][]6}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Where The Bytes Go (Original)}{6}{subsection.5.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Byte budget breakdown --- InEar Original. PPG alone = 18,000\,B/s = 32\% of all traffic!}}{6}{table.caption.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Where The Bytes Go (Optimized)}{6}{subsection.5.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Byte budget breakdown --- InEar Optimized. \textbf  {Savings vs.\ original: ${\sim }$49\%}}}{6}{table.caption.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}How The Stream Looks Over Time}{6}{section.6}\protected@file@percent }
+\newlabel{sec:stream-behavior}{{6}{6}{How The Stream Looks Over Time}{section.6}{}}
+\newlabel{sec:stream-behavior@cref}{{[section][6][]6}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}How Packets Flow}{6}{subsection.6.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}{\ignorespaces Packet timing comparison}}{6}{lstlisting.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}What 1 Second of Data Looks Like}{6}{subsection.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Packet type distribution. 75\% of packets are the small 26-byte EEG-only type.}}{7}{table.caption.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}What Happens When Data Is Missing?}{7}{subsection.6.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}{\ignorespaces Sample-and-hold behavior for multi-rate sensors}}{7}{lstlisting.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Original vs.\ Optimized --- Tradeoffs}{7}{section.7}\protected@file@percent }
+\newlabel{sec:tradeoff-matrix}{{7}{7}{Original vs.\ Optimized --- Tradeoffs}{section.7}{}}
+\newlabel{sec:tradeoff-matrix@cref}{{[section][7][]7}{[1][7][]7}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Head-to-head trade-off comparison}}{7}{table.caption.17}\protected@file@percent }
+\newlabel{tab:tradeoff}{{11}{7}{Head-to-head trade-off comparison}{table.caption.17}{}}
+\newlabel{tab:tradeoff@cref}{{[table][11][]11}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}All The Optimization Ideas (28 Tactics)}{7}{section.8}\protected@file@percent }
+\newlabel{sec:taxonomy}{{8}{7}{All The Optimization Ideas (28 Tactics)}{section.8}{}}
+\newlabel{sec:taxonomy@cref}{{[section][8][]8}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Category 1: Bandwidth Optimization}{7}{subsection.8.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Category 1: Bandwidth optimization tactics}}{8}{table.caption.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Category 2: Latency Optimization}{8}{subsection.8.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Category 2: Latency optimization tactics}}{8}{table.caption.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Category 3: Integrity Optimization}{8}{subsection.8.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Category 3: Integrity optimization tactics}}{8}{table.caption.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Category 4: Parser/CPU Optimization}{8}{subsection.8.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Category 4: Parser/CPU optimization tactics}}{8}{table.caption.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Category 5: Firmware CPU Optimization}{8}{subsection.8.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Category 5: Firmware CPU optimization tactics}}{9}{table.caption.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.6}Category 6: Robustness Optimization}{9}{subsection.8.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Category 6: Robustness optimization tactics}}{9}{table.caption.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.7}Category 7: Data Quality Optimization}{9}{subsection.8.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Category 7: Data quality optimization tactics}}{9}{table.caption.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Detailed Notes On Each Tactic}{9}{section.9}\protected@file@percent }
+\newlabel{sec:tactic-details}{{9}{9}{Detailed Notes On Each Tactic}{section.9}{}}
+\newlabel{sec:tactic-details@cref}{{[section][9][]9}{[1][9][]9}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Category 1 --- Bandwidth}{9}{subsection.9.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.1.1}1A --- Multi-Rate Auxiliary Sampling {\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}\,Implemented}{9}{subsubsection.9.1.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Nyquist justification for multi-rate scheduling}}{9}{table.caption.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.1.2}1B --- Delta Encoding for EEG}{10}{subsubsection.9.1.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}{\ignorespaces Delta encoding example}}{10}{lstlisting.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.1.3}1C --- Variable-Width Integers (VarInt)}{10}{subsubsection.9.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.1.4}1E --- PPG to 24-bit (from 48-bit) {\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}\,Free Win}{10}{subsubsection.9.1.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.1.5}1F --- Smaller Header/Footer}{10}{subsubsection.9.1.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.1.6}1G --- Multi-Sample Batching}{10}{subsubsection.9.1.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Category 2 --- Latency}{11}{subsection.9.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.2.1}2A --- Reduce Packet Size}{11}{subsubsection.9.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.2.2}2B --- Increase Baud Rate}{11}{subsubsection.9.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces Wire time at various baud rates}}{11}{table.caption.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.2.3}2C --- USB Flush Optimization}{11}{subsubsection.9.2.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}{\ignorespaces USB flush optimization}}{11}{lstlisting.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.2.4}2D --- DMA SPI\textrightarrow UART Pipeline}{11}{subsubsection.9.2.4}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces CPU-mediated vs.\ DMA data flow}}{11}{lstlisting.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Category 3 --- Integrity}{12}{subsection.9.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.1}3A --- CRC-8 Instead of XOR {\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}\,Free Win}{12}{subsubsection.9.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces Error detection: XOR vs.\ CRC-8}}{12}{table.caption.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.2}3B --- Forward Error Correction (FEC)}{12}{subsubsection.9.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.3}3C --- Retransmission (ARQ)}{12}{subsubsection.9.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.4}3D --- Longer Sync Pattern}{12}{subsubsection.9.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.5}3E --- Explicit Length Field}{12}{subsubsection.9.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Category 4 --- Parser/CPU (Host Side)}{12}{subsection.9.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.4.1}4A --- Ring Buffer Instead of \texttt  {std::deque} {\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}\,Free Win}{12}{subsubsection.9.4.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}{\ignorespaces Ring buffer implementation sketch}}{13}{lstlisting.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.4.2}4B --- Zero-Copy Parsing}{13}{subsubsection.9.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.4.3}4C --- SIMD Byte Conversion}{13}{subsubsection.9.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.4.4}4D --- Remove \texttt  {std::chrono} from Hot Path {\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}\,Free Win}{13}{subsubsection.9.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.4.5}4E --- Batch \texttt  {addToBuffer()} Calls}{13}{subsubsection.9.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.5}Category 5 --- Firmware CPU (Teensy Side)}{13}{subsection.9.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.5.1}5A --- Precomputed Packet Templates}{13}{subsubsection.9.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.5.2}5B --- Packet Type Lookup Table {\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}\,Free Win}{14}{subsubsection.9.5.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}{\ignorespaces Packet type lookup table}}{14}{lstlisting.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.5.3}5C --- ISR-Based Packet Assembly}{14}{subsubsection.9.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.6}Category 6 --- Robustness}{14}{subsection.9.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.6.1}6A --- Heartbeat / Watchdog}{14}{subsubsection.9.6.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}{\ignorespaces Heartbeat disconnect detection}}{14}{lstlisting.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.6.2}6B --- Connection Handshake}{14}{subsubsection.9.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.6.3}6C --- Configurable Sample Rate}{14}{subsubsection.9.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces ADS1299 configurable sample rates}}{15}{table.caption.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.6.4}6D --- Per-Channel Gain Control}{15}{subsubsection.9.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.7}Category 7 --- Data Quality}{15}{subsection.9.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.7.1}7A --- Hardware Clock Synchronization}{15}{subsubsection.9.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.7.2}7B --- Impedance Measurement}{15}{subsubsection.9.7.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces Electrode impedance quality thresholds}}{15}{table.caption.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.7.3}7C --- Higher Sample Rate}{15}{subsubsection.9.7.3}\protected@file@percent }
+\gdef \LT@i {\LT@entry 
+    {4}{62.56586pt}\LT@entry 
+    {1}{49.07912pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{54.76958pt}\LT@entry 
+    {1}{49.07912pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {24}{\ignorespaces Sample rate vs.\ bandwidth utilization}}{16}{table.caption.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}The Big Trade-Off Table}{16}{section.10}\protected@file@percent }
+\newlabel{sec:full-matrix}{{10}{16}{The Big Trade-Off Table}{section.10}{}}
+\newlabel{sec:full-matrix@cref}{{[section][10][]10}{[1][16][]16}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {25}{\ignorespaces Full 28-tactic trade-off matrix}}{16}{table.25}\protected@file@percent }
+\newlabel{tab:full-matrix}{{25}{16}{Full 28-tactic trade-off matrix}{table.25}{}}
+\newlabel{tab:full-matrix@cref}{{[table][25][]25}{[1][16][]16}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {11}Easy Wins --- Do These First}{17}{section.11}\protected@file@percent }
+\newlabel{sec:free-wins}{{11}{17}{Easy Wins --- Do These First}{section.11}{}}
+\newlabel{sec:free-wins@cref}{{[section][11][]11}{[1][16][]17}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {26}{\ignorespaces Recommended free-win optimizations, prioritized by effort-to-benefit ratio}}{17}{table.caption.31}\protected@file@percent }
+\newlabel{tab:free-wins}{{26}{17}{Recommended free-win optimizations, prioritized by effort-to-benefit ratio}{table.caption.31}{}}
+\newlabel{tab:free-wins@cref}{{[table][26][]26}{[1][16][]17}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {12}Comparing With OpenBCI Isn't Really Fair}{17}{section.12}\protected@file@percent }
+\newlabel{sec:openbci-comparison}{{12}{17}{Comparing With OpenBCI Isn't Really Fair}{section.12}{}}
+\newlabel{sec:openbci-comparison@cref}{{[section][12][]12}{[1][17][]17}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {27}{\ignorespaces Fundamental hardware differences between OpenBCI and InEar}}{17}{table.caption.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {13}Reminder: Serial 8-N-1 Bandwidth Math}{17}{section.13}\protected@file@percent }
+\newlabel{sec:appendix-serial-math}{{13}{17}{Reminder: Serial 8-N-1 Bandwidth Math}{section.13}{}}
+\newlabel{sec:appendix-serial-math@cref}{{[section][13][]13}{[1][17][]17}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.1}What ``8-N-1'' Actually Means}{18}{subsection.13.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.2}The Formula}{18}{subsection.13.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {28}{\ignorespaces Correct vs.\ incorrect serial throughput calculations}}{18}{table.caption.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.3}Utilization}{18}{subsection.13.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {14}Reference: Exact Byte Offsets For Every Packet}{19}{section.14}\protected@file@percent }
+\newlabel{sec:appendix-byte-offsets}{{14}{19}{Reference: Exact Byte Offsets For Every Packet}{section.14}{}}
+\newlabel{sec:appendix-byte-offsets@cref}{{[section][14][]14}{[1][19][]19}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.1}OpenBCI Cyton --- 33 Bytes (Fixed)}{19}{subsection.14.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {29}{\ignorespaces OpenBCI Cyton byte-level packet layout}}{19}{table.caption.34}\protected@file@percent }
+\newlabel{tab:openbci-offsets}{{29}{19}{OpenBCI Cyton byte-level packet layout}{table.caption.34}{}}
+\newlabel{tab:openbci-offsets@cref}{{[table][29][]29}{[1][19][]19}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {30}{\ignorespaces OpenBCI Cyton auxiliary data interpretation (bytes 26--31)}}{19}{table.caption.35}\protected@file@percent }
+\newlabel{tab:openbci-aux}{{30}{19}{OpenBCI Cyton auxiliary data interpretation (bytes 26--31)}{table.caption.35}{}}
+\newlabel{tab:openbci-aux@cref}{{[table][30][]30}{[1][19][]19}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.2}InEar Teensy Original --- 56 Bytes (Fixed)}{20}{subsection.14.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {31}{\ignorespaces InEar Original byte-level packet layout}}{20}{table.caption.36}\protected@file@percent }
+\newlabel{tab:inear-orig-offsets}{{31}{20}{InEar Original byte-level packet layout}{table.caption.36}{}}
+\newlabel{tab:inear-orig-offsets@cref}{{[table][31][]31}{[1][19][]20}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.3}InEar Teensy Optimized --- Variable Length}{20}{subsection.14.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {32}{\ignorespaces Optimized protocol header (all packet types)}}{20}{table.caption.37}\protected@file@percent }
+\newlabel{tab:opt-header}{{32}{20}{Optimized protocol header (all packet types)}{table.caption.37}{}}
+\newlabel{tab:opt-header@cref}{{[table][32][]32}{[1][20][]20}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {33}{\ignorespaces EEG data block (present in every packet)}}{21}{table.caption.38}\protected@file@percent }
+\newlabel{tab:opt-eeg}{{33}{21}{EEG data block (present in every packet)}{table.caption.38}{}}
+\newlabel{tab:opt-eeg@cref}{{[table][33][]33}{[1][20][]21}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {34}{\ignorespaces Optional marker block (+1\,byte). Present when type has \texttt  {0x10} flag set.}}{21}{table.caption.39}\protected@file@percent }
+\newlabel{tab:opt-marker}{{34}{21}{Optional marker block (+1\,byte). Present when type has \hexval {10} flag set}{table.caption.39}{}}
+\newlabel{tab:opt-marker@cref}{{[table][34][]34}{[1][21][]21}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {35}{\ignorespaces Optional accelerometer block (+6\,bytes). Types: \texttt  {0x01}, \texttt  {0x03}, \texttt  {0x05}, \texttt  {0x06}.}}{21}{table.caption.40}\protected@file@percent }
+\newlabel{tab:opt-accel}{{35}{21}{Optional accelerometer block (+6\,bytes). Types: \hexval {01}, \hexval {03}, \hexval {05}, \hexval {06}}{table.caption.40}{}}
+\newlabel{tab:opt-accel@cref}{{[table][35][]35}{[1][21][]21}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {36}{\ignorespaces Optional PPG block (+18\,bytes). Types: \texttt  {0x02}, \texttt  {0x03}, \texttt  {0x06}.}}{21}{table.caption.41}\protected@file@percent }
+\newlabel{tab:opt-ppg}{{36}{21}{Optional PPG block (+18\,bytes). Types: \hexval {02}, \hexval {03}, \hexval {06}}{table.caption.41}{}}
+\newlabel{tab:opt-ppg@cref}{{[table][36][]36}{[1][21][]21}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {37}{\ignorespaces Optional health block (+4\,bytes). Types: \texttt  {0x04}, \texttt  {0x05}, \texttt  {0x06}.}}{21}{table.caption.42}\protected@file@percent }
+\newlabel{tab:opt-health}{{37}{21}{Optional health block (+4\,bytes). Types: \hexval {04}, \hexval {05}, \hexval {06}}{table.caption.42}{}}
+\newlabel{tab:opt-health@cref}{{[table][37][]37}{[1][21][]21}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {38}{\ignorespaces Optimized protocol footer (all packet types)}}{22}{table.caption.43}\protected@file@percent }
+\newlabel{tab:opt-footer}{{38}{22}{Optimized protocol footer (all packet types)}{table.caption.43}{}}
+\newlabel{tab:opt-footer@cref}{{[table][38][]38}{[1][21][]22}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {39}{\ignorespaces Absolute offset map for each optimized packet type (no marker)}}{22}{table.caption.44}\protected@file@percent }
+\newlabel{tab:opt-concrete-offsets}{{39}{22}{Absolute offset map for each optimized packet type (no marker)}{table.caption.44}{}}
+\newlabel{tab:opt-concrete-offsets@cref}{{[table][39][]39}{[1][22][]22}{}{}{}}
+\gdef \LT@ii {\LT@entry 
+    {5}{71.63196pt}\LT@entry 
+    {1}{57.61504pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{49.07912pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{43.38866pt}\LT@entry 
+    {1}{54.76958pt}\LT@entry 
+    {1}{54.76958pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {15}Reference: Tactic Quick-Reference Table}{23}{section.15}\protected@file@percent }
+\newlabel{sec:appendix-tactic-matrix}{{15}{23}{Reference: Tactic Quick-Reference Table}{section.15}{}}
+\newlabel{sec:appendix-tactic-matrix@cref}{{[section][15][]15}{[1][23][]23}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {40}{\ignorespaces All 28 optimization tactics --- trade-off matrix}}{23}{table.40}\protected@file@percent }
+\newlabel{tab:tactic-quick-ref}{{40}{23}{All 28 optimization tactics --- trade-off matrix}{table.40}{}}
+\newlabel{tab:tactic-quick-ref@cref}{{[table][40][]40}{[1][23][]23}{}{}{}}
+\gdef \@abspage@last{24}

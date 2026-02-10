@@ -47,14 +47,14 @@ This document analyzes three EEG streaming protocols used in the Open Ephys ecos
 
 ### 2.1 OpenBCI Cyton
 
-A wireless EEG streaming protocol using RFDuino radio modules. The Cyton board transmits to a USB dongle over 2.4 GHz radio, which presents as a virtual serial port.
+A wireless EEG streaming protocol using RFduino (nRF51822) modules. The Cyton board transmits to a USB dongle over 2.4 GHz Gazell link, which presents as a virtual serial port.
 
 - **8 EEG channels** at 24-bit resolution (ADS1299)
 - **3-axis accelerometer** (LIS3DH)
-- **250 Hz** sample rate (limited by radio bandwidth)
-- **Wireless** link (2.4 GHz Nordic Gazelle protocol)
+- **250 Hz** sample rate (limited by Gazell bandwidth)
+- **Wireless** link (RFduino / Nordic Gazell protocol, 2.4 GHz)
 - **No checksum** — relies on USB's built-in error detection
-- Max radio payload is 31 bytes; dongle adds 2 framing bytes → 33 bytes
+- Max Gazell payload is 31 bytes; dongle adds 2 framing bytes → 33 bytes
 
 ### 2.2 InEar Teensy Original
 
@@ -103,7 +103,7 @@ One packet = one snapshot of 8 brain channels
  └──────────────────────────────────────────────────────────────────┘
 
  ⚠ No checksum! Relies on USB's own error checking.
- 📡 Sent wirelessly → slower baud rate, fewer channels possible.
+ 📡 Sent over Gazell link → slower baud rate, fewer channels possible.
 ```
 
 ### 3.2 InEar Teensy Original — 56 Bytes
@@ -636,7 +636,7 @@ At 100 Hz (optimized): saves 900 B/s
 At 1000 Hz (original): saves 9,000 B/s
 ```
 
-**Why 48-bit exists**: The MAX30102 PPG sensor has an 18-bit ADC with a 4-sample averaging mode, producing values that fit comfortably in 20 bits. The firmware currently packs this into 48 bits using `packInt48BE()`:
+**Why 48-bit exists**: The MAX30105 PPG sensor has an 18-bit ADC with a 4-sample averaging mode, producing values that fit comfortably in 20 bits. The firmware currently packs this into 48 bits using `packInt48BE()`:
 
 ```c++
 // Current firmware code:
@@ -865,9 +865,9 @@ Reed-Solomon for packets:
 - 🔴 **Massive complexity**: RS encoding/decoding requires Galois field arithmetic
 - 🔴 **Bandwidth overhead**: 15-75% depending on correction strength
 - 🔴 **Overkill for USB**: USB 2.0 has hardware-level CRC16 on every packet, so the physical link is already very reliable
-- 🟢 Useful if a noisy radio link were ever added
+- 🟢 Useful if a lossy link (e.g. Gazell) were ever added
 
-**Verdict**: Overkill for wired USB. Only makes sense if migrating to Bluetooth, WiFi, or other lossy wireless links.
+**Verdict**: Overkill for wired USB. Only makes sense if migrating to Bluetooth, WiFi, or other lossy links.
 
 ---
 
@@ -1527,15 +1527,15 @@ The three protocols solve fundamentally different problems:
 
 | | OpenBCI Cyton | InEar Teensy |
 |---|---|---|
-| **Link** | Wireless (2.4 GHz radio) | Wired (USB) |
-| **Bottleneck** | Radio bandwidth (31 bytes/packet max) | Effectively unlimited |
+| **Link** | Wireless (RFduino Gazell, 2.4 GHz) | Wired (USB) |
+| **Bottleneck** | Gazell BW (31 bytes/packet max) | Effectively unlimited |
 | **EEG channels** | 8 | 5 |
 | **Sensor suite** | EEG + accelerometer only | EEG + accel + PPG + temp + battery + sync |
 | **Primary use** | General-purpose research EEG | Specialized in-ear wearable |
-| **Baud rate** | 115,200 (radio-limited) | 2,000,000 (USB-capable) |
-| **Sample rate** | 250 Hz (radio-limited) | 1,000 Hz |
+| **Baud rate** | 115,200 (Gazell-limited) | 2,000,000 (USB-capable) |
+| **Sample rate** | 250 Hz (Gazell-limited) | 1,000 Hz |
 
-**OpenBCI's 71.6% utilization is not "worse"** — it's operating near the physical limit of its wireless radio. It can't go faster without changing hardware. The InEar protocols have abundant headroom because USB is orders of magnitude faster than a 2.4 GHz radio link.
+**OpenBCI's 71.6% utilization is not "worse"** — it's at the physical limit of its Gazell link. Can't go faster without new hardware. InEar has headroom because USB is much faster than 2.4 GHz Gazell.
 
 **If OpenBCI had to carry InEar's data**, it would need >4× its available bandwidth — physically impossible without hardware changes.
 
