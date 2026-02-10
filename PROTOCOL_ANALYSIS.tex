@@ -283,7 +283,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
 \centering
 \begin{bytefield}[bitwidth=0.82em, bitheight=2.5em]{33}
     \bitheader{0,1,2,4,7,10,13,16,19,22,25,26,32} \\
-    \bitbox{1}{\scalebox{.45}{\tiny\texttt{0xA0}}\\\scalebox{.5}{\tiny START}} &
+    \bitbox{1}{\scalebox{.45}{\tiny\texttt{0xA0}}\\\scalebox{.4}{\tiny START}} &
     \bitbox{1}{\scalebox{.55}{\tiny SEQ}} &
     \bitbox{3}{\tiny Ch1} &
     \bitbox{3}{\tiny Ch2} &
@@ -329,7 +329,7 @@ No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ s
     \bitbox{2}{\tiny S} &
     \bitbox{1}{\scalebox{.7}{\tiny C}} &
     \bitbox{1}{\scalebox{.5}{\tiny CHK}} &
-    \bitbox{2}{\scalebox{.5}{\tiny END}\\\scalebox{.45}{\tiny C0\,C0}}
+    \bitbox{2}{\scalebox{.4}{\tiny END}\\\scalebox{.35}{\tiny C0\,C0}}
 \end{bytefield}
 \caption{InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter. 13 bytes of padding between Sync and Counter are omitted from diagram.}
 \label{fig:inear-original-packet}
@@ -424,7 +424,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 \begin{bytefield}[bitwidth=0.56em, bitheight=2.5em]{54}
     \bitheader{0,2,3,4,8,23,29,47,49,51,52,53} \\
     \bitbox{2}{\scalebox{.7}{\tiny ST}} &
-    \bitbox{1}{\scalebox{.4}{\tiny T}\\\scalebox{.35}{\hexval{06}}} &
+    \bitbox{1}{\scalebox{.4}{\tiny T}\\\scalebox{.3}{\hexval{06}}} &
     \bitbox{1}{\scalebox{.7}{\tiny S}} &
     \bitbox{4}{\tiny TS} &
     \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
@@ -718,10 +718,9 @@ This is perfectly fine for slow signals because the accelerometer hasn't meaning
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{|l|>{\raggedright\arraybackslash}C{2.8cm}|>{\raggedright\arraybackslash}C{2.8cm}|>{\raggedright\arraybackslash}C{2.8cm}|}
+\begin{tabular}{|l|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{3.8cm}|}
 \hline
 \textbf{Dimension} & \textbf{InEar Original} & \textbf{InEar Optimized} & \textbf{Winner} \\\hline
-\hline
 Bandwidth & 56\,KB/s & ${\sim}$28.5\,KB/s & \textcolor{okgreen}{\ding{51}} Optimized (49\% less) \\
 Latency & 280\,$\mu$s wire & 130--270\,$\mu$s wire & \textcolor{okgreen}{\ding{51}} Optimized \\
 Integrity & XOR checksum & XOR checksum & = Tie \\
@@ -733,7 +732,7 @@ Headroom & 72\% free & 86\% free & \textcolor{okgreen}{\ding{51}} Optimized \\
 Memory Efficiency & 13\,B wasted/pkt & Zero waste & \textcolor{okgreen}{\ding{51}} Optimized \\
 Extensibility & 13 reserved bytes & New packet type needed & \textcolor{okgreen}{\ding{51}} Original \\
 \hline
-\end{tabularx}
+\end{tabular}
 \caption{Head-to-head trade-off comparison}
 \label{tab:tradeoff}
 \end{table}
