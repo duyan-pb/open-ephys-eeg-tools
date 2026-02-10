@@ -1,7 +1,6 @@
 % =============================================================================
-% Protocol Analysis & Optimization Report
-% InEar Teensy EEG Streaming Protocols
-% February 2026
+% Personal notes on EEG streaming protocols
+% InEar Teensy project
 % =============================================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -110,9 +109,9 @@
     linkcolor=black,
     urlcolor=black,
     citecolor=black,
-    pdftitle={Protocol Analysis \& Optimization Report},
-    pdfauthor={InEar Teensy EEG Project},
-    pdfsubject={EEG Streaming Protocol Analysis},
+    pdftitle={EEG Protocol Notes},
+    pdfauthor={Personal Notes},
+    pdfsubject={EEG Streaming Protocol Notes},
 }
 
 % --- Compact lists ---
@@ -126,37 +125,28 @@
 % =============================================================================
 \begin{document}
 
-% --- Title Page ---
+% --- Title ---
 \hypersetup{pageanchor=false}
-\begin{titlepage}
-\centering
-\vspace*{3cm}
-{\Huge\bfseries Protocol Analysis \&\\[0.3em] Optimization Report\par}
-\vspace{1.5cm}
-{\Large InEar Teensy EEG Streaming Protocols\\[0.5em]
-Findings, Comparisons \& Optimization Tactics\par}
-\vspace{2cm}
-{\large February 2026\par}
-\vspace{3cm}
-\fbox{\parbox{0.75\textwidth}{\centering
-\textbf{Key Finding:} The optimized protocol saves ${\sim}49\%$ bandwidth by only sending auxiliary sensor data when it actually changes, while maintaining identical EEG quality.
-}}
-\vfill
-{\small Generated from analysis of the \texttt{open-ephys-eeg-tools} repository\\
-OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
-\end{titlepage}
+\begin{center}
+{\LARGE\bfseries EEG Protocol Notes\par}
+\vspace{0.5em}
+{\large InEar Teensy protocols\par}
+\vspace{0.5em}
+{\small Optimized protocol saves ${\sim}49\%$ bandwidth by sending aux data only when it changes.}
+\end{center}
+\vspace{1em}
+\hrule
+\vspace{1em}
 
-% --- Table of Contents ---
+% (no table of contents --- just notes)
 \hypersetup{pageanchor=true}
 \pagenumbering{arabic}
-\tableofcontents
-\newpage
 
 % =============================================================================
-\section{Executive Summary}
+\section{Quick Overview}
 \label{sec:executive-summary}
 
-This document analyzes three EEG streaming protocols used in the Open Ephys ecosystem.
+Three EEG streaming protocols:
 
 \begin{table}[H]
 \centering
@@ -185,7 +175,7 @@ This document analyzes three EEG streaming protocols used in the Open Ephys ecos
 
 \subsection{OpenBCI Cyton}
 
-A wireless EEG streaming protocol using RFDuino radio modules. The Cyton board transmits to a USB dongle over 2.4\,GHz radio, which presents as a virtual serial port.
+Wireless EEG. Cyton board $\to$ USB dongle over 2.4\,GHz radio. Shows up as virtual serial port.
 
 \begin{itemize}
     \item \textbf{8 EEG channels} at 24-bit resolution (ADS1299)
@@ -198,7 +188,7 @@ A wireless EEG streaming protocol using RFDuino radio modules. The Cyton board t
 
 \subsection{InEar Teensy Original}
 
-A wired USB protocol for a Teensy~4.1 microcontroller with ADS1299 EEG front-end plus multiple biometric sensors. Designed for in-ear EEG devices.
+Wired USB. Teensy~4.1 + ADS1299 + biometric sensors. In-ear EEG device.
 
 \begin{itemize}
     \item \textbf{5 EEG channels} at 24-bit resolution
@@ -210,18 +200,18 @@ A wired USB protocol for a Teensy~4.1 microcontroller with ADS1299 EEG front-end
 
 \subsection{InEar Teensy Optimized}
 
-Same hardware as the original, but with a redesigned protocol that sends sensor data only at each sensor's native rate:
+Same hardware, different protocol. Sends each sensor at its own rate, not everything at 1\,kHz:
 
 \begin{itemize}
     \item \textbf{Variable-length packets} (26--55 bytes) based on content
     \item \textbf{Multi-rate sampling}: EEG at 1000\,Hz, accelerometer at 250\,Hz, PPG at 100\,Hz, temperature/battery at 10\,Hz
     \item \textbf{Enumerated packet types} tell the receiver exactly what data is included
-    \item \textbf{Sample-and-hold} on the receiver: when slow sensors aren't sent, the receiver uses the last known value
+    \item \textbf{Sample-and-hold}: receiver keeps the last value for sensors not in the current packet
     \item Same error detection (XOR checksum)
 \end{itemize}
 
 % =============================================================================
-\section{Packet Structure Visualizations}
+\section{What The Packets Look Like}
 \label{sec:packet-structures}
 
 \subsection{OpenBCI Cyton --- 33 Bytes}
@@ -255,7 +245,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
     \item \textbf{END} (1\,B): Stop byte (\hexval{C0}--\hexval{C6}), also encodes packet type
 \end{itemize}
 
-\textbf{Note to self:} No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ slower baud rate, fewer channels possible.
+\textbf{Note to self:} No checksum. Relies on USB error checking. Wireless link = slower baud, fewer channels.
 
 \subsection{InEar Teensy Original --- 56 Bytes}
 
@@ -304,11 +294,11 @@ END & 2\,B & Footer: \hexval{C0}\,\hexval{C0} \\
 \caption{InEar Original field descriptions}
 \end{table}
 
-\textbf{Note to self:} Sends ALL sensor data every packet, even slow-changing values like temperature and battery that update far less frequently.
+\textbf{Note to self:} Every packet has all sensors, even slow ones like temp/battery.
 
 \subsection{InEar Teensy Optimized --- 26 to 55 Bytes}
 
-The key idea: \textit{don't send data that hasn't changed!}
+Key idea: skip data that hasn't changed.
 
 \begin{table}[H]
 \centering
@@ -404,12 +394,12 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 \end{table}
 
 % =============================================================================
-\section{Data Content Comparison}
+\section{What's Actually In Each Packet}
 \label{sec:data-content}
 
-These three protocols transport fundamentally \textbf{different amounts and types of data}. A direct bandwidth comparison without accounting for this is misleading.
+The three protocols carry different data. Bandwidth comparison alone is misleading.
 
-\subsection{What Each Protocol Actually Carries}
+\subsection{Side-by-Side Sensor Comparison}
 
 \begin{table}[H]
 \centering
@@ -453,17 +443,17 @@ InEar Opt.\ (avg) & 15\,B & ${\sim}$13.5\,B & $\mathbf{{\sim}28.5}$\,\textbf{B} 
 
 \subsection{The PPG Problem}
 
-PPG (photoplethysmography / heart pulse) data is the single biggest auxiliary payload:
+PPG (heart pulse) uses the most bandwidth:
 
 \[
 \text{PPG} = 3 \text{ channels} \times 6 \text{ bytes} = 18 \text{ bytes per sample}
 \]
 
-That is \textbf{more than all 5 EEG channels combined} (15 bytes)!
+More than all 5 EEG channels combined (15 bytes).
 
-In the original protocol, 18 bytes sent $1000\times$/sec = \textbf{18,000\,B/s just for PPG}.
+In the original protocol: 18 bytes $\times$ 1000/sec = 18,000\,B/s for PPG alone.
 
-The heart pulse signal has meaningful content up to ${\sim}$25\,Hz. Nyquist requires $\geq$50\,Hz sampling. The optimized protocol sends PPG at 100\,Hz ($2\times$ Nyquist margin):
+PPG content goes up to ${\sim}$25\,Hz. Nyquist minimum is $\geq$50\,Hz. Optimized protocol sends at 100\,Hz ($2\times$ margin):
 
 \begin{align}
 \text{Original PPG:}\quad & 18 \text{\,B} \times 1000 \text{\,Hz} = 18{,}000 \text{\,B/s} \nonumber\\
@@ -471,9 +461,9 @@ The heart pulse signal has meaningful content up to ${\sim}$25\,Hz. Nyquist requ
 \text{Savings:}\quad & 16{,}200 \text{\,B/s}\;(90\% \text{ reduction for PPG alone!}) \nonumber
 \end{align}
 
-\subsection{If OpenBCI Had To Carry The Same Data}
+\subsection{If OpenBCI Had The Same Sensors}
 
-If OpenBCI Cyton needed to send the same sensor suite as InEar at 1000\,Hz:
+If OpenBCI Cyton had to send the same data as InEar at 1000\,Hz:
 
 \begin{align}
 \text{Needed per sample:}\quad & 15 + 6 + 18 + 2 + 2 + 5 = 48 \text{\,bytes} \nonumber\\
@@ -481,15 +471,15 @@ If OpenBCI Cyton needed to send the same sensor suite as InEar at 1000\,Hz:
 \text{Available (8-N-1):}\quad & 115{,}200 \div 10 = 11{,}520 \text{\,B/s max} \nonumber
 \end{align}
 
-\textbf{Note to self:} OpenBCI would need $4.2\times$ more bandwidth than available. This is why direct OpenBCI-vs-InEar bandwidth comparisons are misleading --- they solve fundamentally different problems with fundamentally different hardware.
+\textbf{Note to self:} Would need $4.2\times$ available bandwidth. Not possible. OpenBCI and InEar are not comparable --- different hardware, different constraints.
 
 % =============================================================================
-\section{Bandwidth Analysis}
+\section{Bandwidth Math}
 \label{sec:bandwidth}
 
 \subsection{Serial 8-N-1 Basics}
 
-All three protocols use standard serial (UART) with 8-N-1 encoding. Each byte requires 10 bits on the wire:
+All three use serial (UART) 8-N-1. Each byte = 10 bits on wire:
 
 \[
 \underbrace{1}_{\text{start}} + \underbrace{8}_{\text{data}} + \underbrace{0}_{\text{parity}} + \underbrace{1}_{\text{stop}} = 10 \text{ bits per byte}
@@ -522,7 +512,7 @@ Wire bit rate & 82,500\,bps & 560,000\,bps & ${\sim}$285,000\,bps \\
 \label{tab:bandwidth}
 \end{table}
 
-\subsection{Headroom Visualization}
+\subsection{Headroom}
 
 \begin{figure}[H]
 \centering
@@ -548,13 +538,13 @@ Wire bit rate & 82,500\,bps & 560,000\,bps & ${\sim}$285,000\,bps \\
     \fill[black] (0, -0.3) rectangle (7.15, 0.3);
     \fill[lightgray] (7.15, -0.3) rectangle (50, 0.3);
     \draw (0, -0.3) rectangle (50, 0.3);
-    \node[anchor=west] at (8, 0) {\small 14.3\% --- massive headroom};
+    \node[anchor=west] at (8, 0) {\small 14.3\%};
 \end{tikzpicture}
 \caption{Bandwidth utilization comparison (bar chart). Each bar represents the percentage of the serial link capacity used.}
 \label{fig:headroom}
 \end{figure}
 
-\subsection{Where The Bytes Go --- InEar Original}
+\subsection{Where The Bytes Go (Original)}
 
 \begin{table}[H]
 \centering
@@ -574,7 +564,7 @@ Overhead (hdr+ts+mkr+ctr+chk+ftr) & 11,000 & 19.6\% \\
 \caption{Byte budget breakdown --- InEar Original. PPG alone = 18,000\,B/s = 32\% of all traffic!}
 \end{table}
 
-\subsection{Where The Bytes Go --- InEar Optimized}
+\subsection{Where The Bytes Go (Optimized)}
 
 \begin{table}[H]
 \centering
@@ -594,10 +584,10 @@ Headers/footers & ${\sim}$10,160 & 35.6\% \\
 \end{table}
 
 % =============================================================================
-\section{Stream Behavior Over Time}
+\section{How The Stream Looks Over Time}
 \label{sec:stream-behavior}
 
-\subsection{Packet Rhythm Comparison}
+\subsection{How Packets Flow}
 
 \begin{lstlisting}[style=diagram, caption={Packet timing comparison}]
 OpenBCI Cyton (250 Hz, uniform):
@@ -615,7 +605,7 @@ InEar Optimized (1000 Hz, variable):
    +- EEG only (most common - small and fast!)
 \end{lstlisting}
 
-\subsection{Optimized Packet Distribution Per Second}
+\subsection{What 1 Second of Data Looks Like}
 
 In one second (1000 packets), the optimized protocol sends:
 
@@ -638,9 +628,9 @@ EEG + Full Sync & 54\,B & 1 & 0.1\% \\
 \caption{Packet type distribution. 75\% of packets are the small 26-byte EEG-only type.}
 \end{table}
 
-\subsection{Sample-and-Hold: What The Receiver Does With Missing Data}
+\subsection{What Happens When Data Is Missing?}
 
-When the optimized protocol sends an EEG-only packet (no accelerometer data), the receiver doesn't show a gap --- it \textbf{holds the last known value}:
+When the optimized protocol sends an EEG-only packet (no accel), the receiver doesn't show a gap --- it just \textbf{holds the last value}:
 
 \begin{lstlisting}[style=diagram, caption={Sample-and-hold behavior for multi-rate sensors}]
 Time:   1ms   2ms   3ms   4ms   5ms   6ms   7ms   8ms
@@ -649,10 +639,10 @@ Accel:  new   held  held  NEW   held  held  held  NEW   (every 4th)
 PPG:    new   held  held  held  held  held  held  held  (every 10th)
 \end{lstlisting}
 
-This is perfectly fine for slow signals because the accelerometer hasn't meaningfully changed in 4\,ms, and PPG hasn't changed in 10\,ms.
+Accel hasn't changed in 4\,ms. PPG hasn't changed in 10\,ms. No information lost.
 
 % =============================================================================
-\section{Trade-Off Matrix: Original vs.\ Optimized}
+\section{Original vs.\ Optimized --- Tradeoffs}
 \label{sec:tradeoff-matrix}
 
 \begin{table}[H]
@@ -678,13 +668,13 @@ Extensibility & Fixed layout & New packet type needed & \ding{51} Original \\
 \end{table}
 
 % =============================================================================
-\section{Complete Optimization Taxonomy}
+\section{All The Optimization Ideas (28 Tactics)}
 \label{sec:taxonomy}
 
-Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tactics were identified across 7 categories.
+28 optimization ideas in 7 categories, starting from the 56-byte fixed protocol.
 
 \subsection{Category 1: Bandwidth Optimization}
-\textit{Reduce bytes on the wire}
+\textit{Fewer bytes on the wire}
 
 \begin{table}[H]
 \centering
@@ -704,7 +694,7 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 \subsection{Category 2: Latency Optimization}
-\textit{Reduce ADC-to-buffer time}
+\textit{Faster ADC-to-screen time}
 
 \begin{table}[H]
 \centering
@@ -722,7 +712,7 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 \subsection{Category 3: Integrity Optimization}
-\textit{Better error detection/correction}
+\textit{Catching errors before they corrupt data}
 
 \begin{table}[H]
 \centering
@@ -741,7 +731,7 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 \subsection{Category 4: Parser/CPU Optimization}
-\textit{Reduce host processing cost}
+\textit{Faster host-side parsing}
 
 \begin{table}[H]
 \centering
@@ -760,7 +750,7 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 \subsection{Category 5: Firmware CPU Optimization}
-\textit{Reduce Teensy processing cost}
+\textit{Less Teensy CPU usage}
 
 \begin{table}[H]
 \centering
@@ -777,7 +767,7 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 \subsection{Category 6: Robustness Optimization}
-\textit{Improve connection reliability}
+\textit{Reliable connections, no data loss}
 
 \begin{table}[H]
 \centering
@@ -795,7 +785,7 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 \subsection{Category 7: Data Quality Optimization}
-\textit{Improve scientific utility}
+\textit{Better data for research}
 
 \begin{table}[H]
 \centering
@@ -812,15 +802,15 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \end{table}
 
 % =============================================================================
-\section{Optimization Tactic Details (All 28 Tactics)}
+\section{Detailed Notes On Each Tactic}
 \label{sec:tactic-details}
 
-\subsection{Category 1 --- Bandwidth Optimization}
+\subsection{Category 1 --- Bandwidth}
 
 % --- 1A ---
 \subsubsection{1A --- Multi-Rate Auxiliary Sampling \implemented}
 
-Instead of sending every sensor at 1000\,Hz, send each at a rate matching its actual information content (Nyquist rate).
+Send each sensor at a rate matching how fast it actually changes (Nyquist rate), not all at 1000\,Hz.
 
 \begin{table}[H]
 \centering
@@ -837,16 +827,16 @@ Temperature & ${\sim}$0\,Hz (DC) & ${\sim}$1\,Hz & 10\,Hz & $10\times$ \\
 \caption{Nyquist justification for multi-rate scheduling}
 \end{table}
 
-\textbf{Physics justification}: Temperature changes over seconds, not milliseconds. Sending temperature $1000\times$/sec is like checking the weather every 3.6 seconds --- you'll get the same reading.
+\textbf{Why}: Temperature changes over seconds. Sending it $1000\times$/sec = same reading every time.
 
-\textbf{Trade-off}: Parser complexity rises from 1 packet type to 14 (7 base $\times$ 2 with marker flag). Receiver must implement sample-and-hold. If a PPG packet is lost, stale for 10\,ms instead of 1\,ms.
+\textbf{Trade-off}: Parser goes from 1 packet type to 14 (7 base $\times$ 2 with marker). Receiver needs sample-and-hold. Lost PPG packet = stale for 10\,ms not 1\,ms.
 
 \textbf{Impact}: Saves ${\sim}$49\% bandwidth ($56{,}000 \to {\sim}28{,}500$\,B/s).
 
 % --- 1B ---
 \subsubsection{1B --- Delta Encoding for EEG}
 
-Send the first sample as an absolute 24-bit value, then send only the \textit{difference} between consecutive samples using fewer bits. EEG at 1\,kHz changes very little sample-to-sample; a typical delta fits in 8--12 bits vs.\ 24 bits.
+Send differences between consecutive samples instead of absolute values. At 1\,kHz, EEG deltas fit in 8--12 bits vs.\ 24.
 
 \begin{lstlisting}[style=diagram, caption={Delta encoding example}]
 Absolute:  sample1 = 123456    -> 3 bytes (24-bit)
@@ -860,12 +850,12 @@ Delta:     sample1 = 123456    -> 3 bytes (24-bit, keyframe)
 Savings: 9 bytes -> 5 bytes for 3 samples (44%)
 \end{lstlisting}
 
-\textbf{Note to self:} If you lose ONE packet, every subsequent sample is corrupted until the next keyframe. Requires periodic absolute keyframes (e.g., every 100th sample) and loss detection via sequence number gaps. Potential savings: 40--60\% for EEG data specifically.
+\textbf{Note to self:} Losing one packet corrupts everything until the next keyframe. Need periodic absolute keyframes (e.g., every 100 samples) and gap detection via sequence numbers. Potential savings: 40--60\% for EEG.
 
 % --- 1C ---
 \subsubsection{1C --- Variable-Width Integers (VarInt)}
 
-Encode values using a variable number of bytes --- small values use fewer bytes (like Protocol Buffers).
+Small values use fewer bytes (like Protocol Buffers).
 
 \textbf{Trade-off}:
 \begin{itemize}
@@ -875,12 +865,12 @@ Encode values using a variable number of bytes --- small values use fewer bytes 
     \item[\ding{51}] Average savings of ${\sim}$30\% combined with delta encoding
 \end{itemize}
 
-\textbf{Verdict}: High complexity for moderate savings. Better suited for file formats than real-time streams.
+\textbf{Verdict}: High complexity, moderate savings. Better for file formats than real-time streams.
 
 % --- 1E ---
 \subsubsection{1E --- PPG to 24-bit (from 48-bit) \freewin}
 
-PPG is currently encoded as 48-bit (6 bytes/channel). Most PPG ADCs are 18--20\,bit. Using 24-bit (3 bytes) is more than enough.
+PPG is 48-bit (6 bytes/channel) but the MAX30102 ADC is 18-bit. 24-bit (3 bytes) is enough.
 
 \begin{align}
 \text{Current:} \quad & 3 \text{ channels} \times 6 \text{\,B} = 18 \text{\,B/sample} \nonumber\\
@@ -888,23 +878,23 @@ PPG is currently encoded as 48-bit (6 bytes/channel). Most PPG ADCs are 18--20\,
 \text{Savings:} \quad & 9 \text{\,B per PPG packet} \nonumber
 \end{align}
 
-The MAX30102 PPG sensor has an 18-bit ADC. The firmware packs this into 48 bits using \texttt{packInt48BE()}, leaving the top 3 bytes always zero. 24-bit gives 16.7 million levels of precision for a signal with ${\sim}$18 bits of useful information.
+Firmware uses \texttt{packInt48BE()}, top 3 bytes always zero. 24-bit = 16.7M levels for ${\sim}$18 bits of data. Sufficient.
 
-\textbf{Trade-off}: Essentially none. This is a \textbf{free win}.
+\textbf{Trade-off}: None. Free win.
 
 % --- 1F ---
 \subsubsection{1F --- Smaller Header/Footer}
 
-Reduce the header and/or footer byte count. Current: 2-byte header (\hexval{A5}\,\hexval{5A}) + 2-byte footer (\hexval{C0}\,\hexval{C0}) = 4\,bytes/packet.
+Current: 2-byte header (\hexval{A5}\,\hexval{5A}) + 2-byte footer (\hexval{C0}\,\hexval{C0}) = 4\,bytes/packet.
 
 \textbf{False sync math}: With a 2-byte header, false sync probability is $1/65{,}536$. With 1-byte: $1/256$ --- $256\times$ more likely.
 
-\textbf{Verdict}: Marginal savings (1--3\,B/pkt) with meaningful reliability impact. Not recommended.
+\textbf{Verdict}: Saves 1--3\,B/pkt, makes resyncing harder. Not worth it.
 
 % --- 1G ---
 \subsubsection{1G --- Multi-Sample Batching}
 
-Pack $N$ samples into a single packet, amortizing header/footer/checksum overhead.
+Pack $N$ samples per packet, share header/footer/checksum cost.
 
 \begin{align}
 \text{Current (1/pkt):} \quad & 3 \times 26 = 78 \text{\,B for 3 samples, 33\,B overhead (42\%)} \nonumber\\
@@ -918,14 +908,14 @@ Pack $N$ samples into a single packet, amortizing header/footer/checksum overhea
     \item[\ding{51}] At $N=4$, overhead drops from 42\% to 17\%
 \end{itemize}
 
-\textbf{Verdict}: Poor fit for real-time neurofeedback; good for high-latency-tolerant recording.
+\textbf{Verdict}: Bad for real-time neurofeedback. OK for recording.
 
-\subsection{Category 2 --- Latency Optimization}
+\subsection{Category 2 --- Latency}
 
 % --- 2A ---
 \subsubsection{2A --- Reduce Packet Size}
 
-Not a separate tactic --- it's the net result of Category 1. Smaller packets spend less time on the wire.
+Side effect of Category 1. Smaller packet = less wire time.
 
 \begin{align}
 \text{Original (56\,B):} \quad & 56 \times 10 / 2{,}000{,}000 = 280\,\mu\text{s} \nonumber\\
@@ -935,7 +925,7 @@ Not a separate tactic --- it's the net result of Category 1. Smaller packets spe
 % --- 2B ---
 \subsubsection{2B --- Increase Baud Rate}
 
-Teensy~4.1 (ARM Cortex-M7, 600\,MHz) supports up to 6\,Mbaud.
+Teensy~4.1 supports up to 6\,Mbaud. Currently at 2\,Mbaud.
 
 \begin{table}[H]
 \centering
@@ -952,13 +942,13 @@ Teensy~4.1 (ARM Cortex-M7, 600\,MHz) supports up to 6\,Mbaud.
 \caption{Wire time at various baud rates}
 \end{table}
 
-{\sloppy \textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits, cable quality critical at $>$3\,Mbaud.
-Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.\par}
+{\sloppy \textbf{Trade-off}: Higher bit error rate, USB-serial IC may not support it, cable quality matters above 3\,Mbaud.
+Low priority --- 130\,$\mu$s is small vs.\ 1\,ms sample period.\par}
 
 % --- 2C ---
 \subsubsection{2C --- USB Flush Optimization}
 
-Use \texttt{Serial.send\_now()} to force immediate USB packet transmission instead of waiting for the USB stack's default ${\sim}$1\,ms buffering interval.
+Call \texttt{Serial.send\_now()} to flush USB immediately instead of waiting for the ${\sim}$1\,ms default buffer interval.
 
 \begin{lstlisting}[style=cpp, caption={USB flush optimization}]
 Serial.write(packet, len);
@@ -966,12 +956,12 @@ Serial.send_now();  // Force immediate USB transfer
 // USB packet sent on next USB frame (~125 us for USB 2.0 HS)
 \end{lstlisting}
 
-\textbf{Verdict}: Easy win --- single line of code, removes up to 1\,ms of non-deterministic latency. Currently \textbf{not implemented} in the firmware.
+\textbf{Verdict}: One line of code. Removes up to 1\,ms latency. Not implemented.
 
 % --- 2D ---
 \subsubsection{\texorpdfstring{2D --- DMA SPI\textrightarrow UART Pipeline}{2D --- DMA SPI to UART Pipeline}}
 
-Use Direct Memory Access hardware to transfer data from ADS1299 SPI bus directly to UART without CPU involvement.
+DMA hardware transfers data from ADS1299 SPI to UART without CPU.
 
 \begin{lstlisting}[style=diagram, caption={CPU-mediated vs.\ DMA data flow}]
 Current:  ADS1299 --SPI--> [CPU reads] --> [CPU builds] --> [CPU writes UART]
@@ -979,14 +969,14 @@ DMA:      ADS1299 --SPI--> [DMA->RAM]  --> [CPU builds] --> [DMA->UART]
                             ^ HW only ^                      ^ HW only ^
 \end{lstlisting}
 
-\textbf{Verdict}: High-effort, high-reward. Best suited if Teensy needs additional processing alongside streaming.
+\textbf{Verdict}: High effort, high reward. Only useful if Teensy needs CPU for other tasks.
 
-\subsection{Category 3 --- Integrity Optimization}
+\subsection{Category 3 --- Integrity}
 
 % --- 3A ---
 \subsubsection{3A --- CRC-8 Instead of XOR \freewin}
 
-Same 1-byte cost, dramatically better error detection.
+Same 1-byte cost as XOR, much better error detection:
 
 \begin{table}[H]
 \centering
@@ -1005,21 +995,21 @@ Random errors & ${\sim}$50\% & 99.6\% \\
 \caption{Error detection: XOR vs.\ CRC-8}
 \end{table}
 
-CRC-8 requires a 256-byte lookup table and one table lookup per byte. At 56,000 lookups/sec --- negligible on a 600\,MHz Teensy or any modern PC.
+Needs a 256-byte lookup table and one lookup per byte. 56,000 lookups/sec on a 600\,MHz Teensy = negligible.
 
 % --- 3B ---
 \subsubsection{3B --- Forward Error Correction (FEC)}
 
-Add redundancy bytes for error correction without retransmission (Hamming, Reed-Solomon).
+Add redundancy bytes to correct errors without retransmission (Hamming, Reed-Solomon).
 
-\textbf{Verdict}: Overkill for wired USB. USB~2.0 has hardware CRC16 on every packet. Only relevant for Bluetooth/WiFi migration.
+\textbf{Verdict}: Overkill for wired USB. USB~2.0 has hardware CRC16. Only relevant for wireless.
 
 % --- 3C ---
 \subsubsection{3C --- Retransmission (ARQ)}
 
 Receiver sends NACK on bad packets; firmware re-sends.
 
-\textbf{Trade-off}: Adds 2--3\,ms latency per retransmit, requires bidirectional protocol and TX ring buffer on Teensy. On USB with near-zero loss rate: unnecessary.
+\textbf{Trade-off}: 2--3\,ms latency per retry, needs bidirectional protocol and TX buffer on Teensy. Near-zero USB loss rate = not needed.
 
 % --- 3D ---
 \subsubsection{3D --- Longer Sync Pattern}
@@ -1032,25 +1022,25 @@ Use 3--4 byte sync instead of current 2-byte \hexval{A5}\,\hexval{5A}.
 \text{4-byte:} \quad & P(\text{false sync}) = 1/2^{32} \approx 1/4.3 \times 10^9 \nonumber
 \end{align}
 
-\textbf{Verdict}: Moderate value. Current 2-byte + checksum verification is already quite robust.
+\textbf{Verdict}: Current 2-byte + checksum is sufficient.
 
 % --- 3E ---
 \subsubsection{3E --- Explicit Length Field}
 
 Add a 1-byte length field so the parser knows the exact packet size before reading.
 
-\textbf{Trade-off}: +1\,byte/packet (1,000\,B/s) for forward-compatibility --- host can skip unknown packet types gracefully without a lookup table.
+\textbf{Trade-off}: +1\,byte/packet (1,000\,B/s). Host can skip unknown packet types without a lookup table.
 
-\textbf{Verdict}: Excellent trade-off. Almost always worth it in evolving protocols.
+\textbf{Verdict}: Good trade-off. Worth doing in any evolving protocol.
 
-\subsection{Category 4 --- Parser/CPU Optimization (Host Side)}
+\subsection{Category 4 --- Parser/CPU (Host Side)}
 
 % --- 4A ---
 \subsubsection{4A --- Ring Buffer Instead of \texttt{std::deque} \freewin}
 
-The current parser uses \texttt{std::deque<uint8\_t>}. Each \texttt{push\_back()}/\texttt{pop\_front()} may allocate heap memory. At 28,500\,bytes/sec $\rightarrow$ up to 28,500 allocations/sec with poor cache locality.
+Current parser uses \texttt{std::deque<uint8\_t>}. Each \texttt{push\_back()}/\texttt{pop\_front()} may allocate heap. At 28,500\,B/s = up to 28,500 allocs/sec, bad cache locality.
 
-A fixed 16\,KB circular buffer eliminates all allocations during operation:
+Fixed 16\,KB circular buffer removes all allocations:
 
 \begin{lstlisting}[style=cpp, caption={Ring buffer implementation sketch}]
 class RingBuffer {
@@ -1069,51 +1059,51 @@ public:
 };
 \end{lstlisting}
 
-Zero allocation hot path, better cache performance, same semantics.
+No allocations in hot path. Better cache. Same behavior.
 
 % --- 4B ---
 \subsubsection{4B --- Zero-Copy Parsing}
 
-Parse values directly from the ring buffer instead of copying into a temporary struct first.
+Parse directly from ring buffer, skip the copy to a temp struct.
 
-\textbf{Trade-off}: Must handle ring buffer wrap-around mid-packet. Saves one memcpy per packet (56\,B $\times$ 1000/sec = 56\,KB/s of copying eliminated). Most impactful combined with 4A.
+\textbf{Trade-off}: Must handle wrap-around mid-packet. Saves one memcpy/packet (56\,B $\times$ 1000/sec = 56\,KB/s eliminated). Best combined with 4A.
 
 % --- 4C ---
 \subsubsection{4C --- SIMD Byte Conversion}
 
-Convert 24-bit big-endian $\to$ 32-bit signed integers using SSE/AVX (x86) or NEON (ARM) in parallel.
+SSE/AVX (x86) or NEON (ARM) for parallel 24-bit BE $\to$ 32-bit signed conversion.
 
-\textbf{Verdict}: Micro-optimization. Only 5 channels --- sequential code takes nanoseconds. Not worth the platform-specific complexity.
+\textbf{Verdict}: Only 5 channels. Sequential code takes nanoseconds. Not worth platform-specific code.
 
 % --- 4D ---
 \subsubsection{4D --- Remove \texttt{std::chrono} from Hot Path \freewin}
 
-The parser calls \texttt{std::chrono::steady\_clock::now()} on every \texttt{updateBuffer()} for bandwidth monitoring. On Windows this involves a kernel syscall.
+Parser calls \texttt{std::chrono::steady\_clock::now()} every \texttt{updateBuffer()} for bandwidth monitoring. On Windows = kernel syscall.
 
-\textbf{Fix}: Replace with a simple packet counter check (\texttt{if (count \% 5000 == 0)}).
+\textbf{Fix}: Use packet counter (\texttt{if (count \% 5000 == 0)}).
 
-\textbf{Effort}: ${\sim}$10 minutes. Replace 3--4 lines. \textbf{Easiest free win} in the entire taxonomy.
+\textbf{Effort}: ${\sim}$10 min, 3--4 lines.
 
 % --- 4E ---
 \subsubsection{4E --- Batch \texttt{addToBuffer()} Calls}
 
-Currently 1 call per packet = 1000 lock cycles/sec. Batching $N$ samples reduces to $1000/N$ lock cycles.
+1 call/packet = 1000 lock cycles/sec. Batch $N$ samples = $1000/N$ locks.
 
-\textbf{Trade-off}: Adds up to $N$\,ms of batching latency. Good for throughput, bad for real-time latency.
+\textbf{Trade-off}: Up to $N$\,ms extra latency. Good for throughput, bad for real-time.
 
-\subsection{Category 5 --- Firmware CPU Optimization (Teensy Side)}
+\subsection{Category 5 --- Firmware CPU (Teensy Side)}
 
 % --- 5A ---
 \subsubsection{5A --- Precomputed Packet Templates}
 
-Pre-fill static fields (header, footer, type) at startup into 7 template buffers. In ISR: \texttt{memcpy} template, overwrite only dynamic fields.
+Pre-fill static fields (header, footer, type) at startup into 7 templates. In ISR: \texttt{memcpy} template, overwrite dynamic fields.
 
-\textbf{Trade-off}: Uses $7 \times 55 = 385$\,bytes of RAM. Teensy~4.1 has 1\,MB. Negligible.
+\textbf{Trade-off}: $7 \times 55 = 385$\,bytes RAM. Teensy has 1\,MB. Negligible.
 
 % --- 5B ---
 \subsubsection{5B --- Packet Type Lookup Table \freewin}
 
-Replace cascading modulo operations with a precomputed 1000-entry array.
+Replace cascading modulo with a precomputed 1000-entry array.
 
 \begin{lstlisting}[style=cpp, caption={Packet type lookup table}]
 // Current: 5 modulo operations + 5 branches
@@ -1136,16 +1126,16 @@ Uses 1000\,bytes of RAM. Teensy has 1\,MB. \textbf{Free win}.
 % --- 5C ---
 \subsubsection{5C --- ISR-Based Packet Assembly}
 
-Build packets inside the IntervalTimer ISR for deterministic timing.
+Build packets in IntervalTimer ISR for deterministic timing.
 
-\textbf{Current status}: The existing firmware already does this (builds and sends in ISR callback). \textbf{Already implemented}.
+\textbf{Status}: Already implemented. Firmware builds and sends in ISR callback.
 
-\subsection{Category 6 --- Robustness Optimization}
+\subsection{Category 6 --- Robustness}
 
 % --- 6A ---
 \subsubsection{6A --- Heartbeat / Watchdog}
 
-Firmware sends a periodic ``I'm alive'' packet at ${\sim}$1\,Hz. If host doesn't receive it for $N$ seconds $\rightarrow$ connection lost.
+Firmware sends ``I'm alive'' packet every ${\sim}$1 sec. No heartbeat for $N$ seconds = connection dead.
 
 \begin{lstlisting}[style=diagram, caption={Heartbeat disconnect detection}]
 Normal:   Host <--- [Data] [Data] [HB] [Data] --- Teensy
@@ -1155,21 +1145,21 @@ Failure:  Host <--- [Data] [Data]             --- (cable yanked!)
           HOST: CONNECTION LOST -> show error, clean up
 \end{lstlisting}
 
-\textbf{Verdict}: Excellent addition. ${\sim}$10\,B/s overhead for fast disconnect detection.
+\textbf{Verdict}: ${\sim}$10\,B/s overhead. Easy to add.
 
 % --- 6B ---
 \subsubsection{6B --- Connection Handshake}
 
-Proper startup: \texttt{HELLO} $\to$ Device Info $\to$ \texttt{START} $\to$ streaming $\to$ \texttt{STOP} $\to$ \texttt{OK}.
+Startup: \texttt{HELLO} $\to$ Device Info $\to$ \texttt{START} $\to$ streaming $\to$ \texttt{STOP} $\to$ \texttt{OK}.
 
-\textbf{Benefits}: Auto-detect firmware version/channel count/sample rate. Prevents protocol mismatch. Clean startup and shutdown.
+Auto-detects firmware version, channel count, sample rate. Prevents mismatch.
 
-\textbf{Trade-off}: Adds ${\sim}$100\,ms to connection startup.
+\textbf{Trade-off}: +${\sim}$100\,ms startup. Negligible.
 
 % --- 6C ---
 \subsubsection{6C --- Configurable Sample Rate}
 
-Host commands Teensy to change sample rate at runtime.
+Host sets Teensy sample rate at runtime.
 
 \begin{table}[H]
 \centering
@@ -1187,7 +1177,7 @@ Host commands Teensy to change sample rate at runtime.
 \caption{ADS1299 configurable sample rates}
 \end{table}
 
-\textbf{Verdict}: High value, moderate effort. Pairs naturally with handshake (6B).
+\textbf{Verdict}: Useful. Pairs with handshake (6B). Moderate effort.
 
 % --- 6D ---
 \subsubsection{6D --- Per-Channel Gain Control}
@@ -1196,12 +1186,12 @@ Set ADS1299 PGA gain per channel at runtime. Gains: $1\times$, $2\times$, $4\tim
 
 \textbf{Use case}: Channels 1--4 at $24\times$ (EEG) and channel 5 at $1\times$ (EMG for jaw clench detection).
 
-\subsection{Category 7 --- Data Quality Optimization}
+\subsection{Category 7 --- Data Quality}
 
 % --- 7A ---
 \subsubsection{7A --- Hardware Clock Synchronization}
 
-Synchronize Teensy's crystal with host PC clock. Current drift: ${\sim}$50\,ppm $\rightarrow$ 180\,ms after 1 hour.
+Sync Teensy crystal with host clock. Without it: ${\sim}$50\,ppm drift $\rightarrow$ 180\,ms off after 1 hour.
 
 \textbf{Method}: Periodic NTP-style time exchange ($T_1, T_2, T_3, T_4$):
 \[
@@ -1209,7 +1199,7 @@ Synchronize Teensy's crystal with host PC clock. Current drift: ${\sim}$50\,ppm 
 \text{RTT} = (T_4 - T_1) - (T_3 - T_2)
 \]
 
-After correction: timestamps accurate to ${\sim}100\,\mu$s. Critical for multi-device synchronization.
+After correction: ${\sim}100\,\mu$s accuracy. Required for multi-device setups.
 
 % --- 7B ---
 \subsubsection{7B --- Impedance Measurement}
@@ -1231,7 +1221,7 @@ $> 1$\,M$\Omega$ & \ding{55} None & No electrode detected \\
 \caption{Electrode impedance quality thresholds}
 \end{table}
 
-\textbf{Verdict}: High value for research. Usually done during setup, not live streaming.
+\textbf{Verdict}: Useful for research. Setup-time only, not during streaming.
 
 % --- 7C ---
 \subsubsection{7C --- Higher Sample Rate}
@@ -1256,13 +1246,13 @@ ADS1299 supports up to 16\,kHz. Bandwidth implications:
 \caption{Sample rate vs.\ bandwidth utilization}
 \end{table}
 
-The current protocol supports up to ${\sim}$4000\,Hz within the 2\,Mbaud link budget.
+Current protocol supports up to ${\sim}$4000\,Hz within the 2\,Mbaud link budget.
 
 % =============================================================================
-\section{Full Trade-Off Matrix (All 28 Tactics)}
+\section{The Big Trade-Off Table}
 \label{sec:full-matrix}
 
-Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metriceq\ = negligible change.
+\metricdown\ = good (reduces/improves), \metricup\ = bad (increases/worsens), \metriceq\ = doesn't matter.
 
 {
 \setlength{\tabcolsep}{3pt}
@@ -1552,10 +1542,10 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 }
 
 % =============================================================================
-\section{Recommended ``Free Wins''}
+\section{Easy Wins --- Do These First}
 \label{sec:free-wins}
 
-These tactics improve at least one metric without meaningfully hurting any other:
+Improvements with no downside:
 
 \begin{table}[H]
 \centering
@@ -1577,10 +1567,10 @@ These tactics improve at least one metric without meaningfully hurting any other
 \end{table}
 
 % =============================================================================
-\section{Why OpenBCI Comparison Is Not Apples-to-Apples}
+\section{Comparing With OpenBCI Isn't Really Fair}
 \label{sec:openbci-comparison}
 
-The three protocols solve fundamentally different problems:
+Different problems, different hardware:
 
 \begin{table}[H]
 \centering
@@ -1600,18 +1590,17 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 \caption{Fundamental hardware differences between OpenBCI and InEar}
 \end{table}
 
-\textbf{Note to self:} OpenBCI's 71.6\% utilization is not ``worse'' --- it's operating near the physical limit of its wireless radio. It can't go faster without changing hardware. The InEar protocols have abundant headroom because USB is orders of magnitude faster than a 2.4\,GHz radio link.
+\textbf{Note to self:} OpenBCI 71.6\% utilization = at the physical limit of its radio. InEar has headroom because USB is much faster than 2.4\,GHz radio.
 
-\textbf{If OpenBCI had to carry InEar's data}, it would need $>4\times$ its available bandwidth --- physically impossible without hardware changes.
+If OpenBCI had InEar's sensors, it would need $>4\times$ its bandwidth. Not possible without hardware change.
 
 % =============================================================================
-\section{Appendix: Serial 8-N-1 Bandwidth Math}
+\section{Reminder: Serial 8-N-1 Bandwidth Math}
 \label{sec:appendix-serial-math}
 
-{\sloppy A common mistake in serial bandwidth calculations is using
-\texttt{baud\_rate~/~8} instead of \texttt{baud\_rate~/~10}.\par}
+{\sloppy Common mistake: \texttt{baud\_rate~/~8} instead of \texttt{baud\_rate~/~10}.\par}
 
-\subsection{What ``8-N-1'' Means}
+\subsection{What ``8-N-1'' Actually Means}
 
 \begin{align}
 8 &= 8 \text{ data bits per character} \nonumber\\
@@ -1620,7 +1609,7 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 \text{Total:} \quad & \underbrace{1}_{\text{start}} + \underbrace{8}_{\text{data}} + \underbrace{0}_{\text{parity}} + \underbrace{1}_{\text{stop}} = 10 \text{ bits per byte on the wire} \nonumber
 \end{align}
 
-\subsection{The Math}
+\subsection{The Formula}
 
 \[
 \text{Bytes/sec} = \frac{\text{Baud rate}}{10}
@@ -1638,7 +1627,7 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 \caption{Correct vs.\ incorrect serial throughput calculations}
 \end{table}
 
-\subsection{Utilization Calculations}
+\subsection{Utilization}
 
 \begin{align}
 \textbf{OpenBCI Cyton:} \quad \frac{33 \times 250}{115{,}200 / 10} &= \frac{8{,}250}{11{,}520} = \mathbf{71.6\%} \\[0.5em]
@@ -1648,10 +1637,10 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 
 % =============================================================================
 \newpage
-\section{Appendix: Byte-Level Packet Offset Tables}
+\section{Reference: Exact Byte Offsets For Every Packet}
 \label{sec:appendix-byte-offsets}
 
-These tables give the exact byte offset, size, and data format of every field in every packet. Use them as a \textbf{parsing reference} --- each row tells you exactly where in the raw byte stream to find a given value.
+Exact byte offset, size, and format of every field in every packet. Use this when writing parsers --- each row tells you exactly where in the raw bytes to find each value.
 
 \subsection{OpenBCI Cyton --- 33 Bytes (Fixed)}
 
@@ -1791,7 +1780,7 @@ The optimized protocol has a \textbf{fixed 8-byte header} and \textbf{fixed 3-by
 
 \subsubsection*{Optional Data Blocks (variable offset)}
 
-The following blocks appear \textbf{after the EEG data} in the order listed. Their absolute offset depends on which preceding blocks are present.
+These blocks come \textbf{after the EEG data} in this order. Their absolute offset depends on which blocks before them are present.
 
 \begin{table}[H]
 \centering
@@ -1877,9 +1866,9 @@ $n{-}1$ & 1\,B & Footer\,2 & \hexval{C0} & End byte 2 (constant) \\
 \end{tabular}
 \end{table}
 
-\subsubsection*{Concrete Offset Maps Per Packet Type}
+\subsubsection*{Cheat Sheet: Offsets Per Packet Type}
 
-For quick reference, these are the \textbf{absolute byte offsets} for every packet type:
+Here are the \textbf{absolute byte offsets} for every packet type --- just look up the row and column:
 
 \begin{table}[H]
 \centering
@@ -1908,12 +1897,12 @@ Footer & 24--25 & 30--31 & 42--43 & 48--49 & 28--29 & 34--35 & 52--53 \\
 
 % =============================================================================
 \newpage
-\section{Appendix: Optimization Tactic Quick-Reference Matrix}
+\section{Reference: Tactic Quick-Reference Table}
 \label{sec:appendix-tactic-matrix}
 
-A compact reference of all 28 optimization tactics showing the impact on each metric dimension.
+Same matrix as before, just in a compact format for quick lookups.
 
-Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metriceq\ = negligible change. More arrows = stronger effect.
+\metricdown\ = good (reduces/improves), \metricup\ = bad (increases/worsens), \metriceq\ = doesn't matter. More arrows = stronger effect.
 
 {
 \setlength{\tabcolsep}{3pt}
