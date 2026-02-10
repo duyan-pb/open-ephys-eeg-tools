@@ -33,23 +33,11 @@
 \usepackage{bytefield}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\usepackage{tcolorbox}
 \usepackage{pifont}
 
 % --- Colors ---
-\definecolor{headerblue}{HTML}{2C3E50}
-\definecolor{codegreen}{HTML}{27AE60}
-\definecolor{codegray}{HTML}{7F8C8D}
-\definecolor{codepurple}{HTML}{8E44AD}
-\definecolor{codeblue}{HTML}{2980B9}
 \definecolor{backgray}{HTML}{F7F7F7}
-\definecolor{warnred}{HTML}{E74C3C}
-\definecolor{okgreen}{HTML}{27AE60}
-\definecolor{warnyellow}{HTML}{F39C12}
-\definecolor{lightblue}{HTML}{EBF5FB}
-\definecolor{lightgreen}{HTML}{EAFAF1}
-\definecolor{lightred}{HTML}{FDEDEC}
-\definecolor{lightyellow}{HTML}{FEF9E7}
+\definecolor{lightgray}{HTML}{D0D0D0}
 
 % --- Listings setup ---
 \lstdefinestyle{code}{
@@ -57,13 +45,13 @@
     basicstyle=\ttfamily\small,
     breaklines=true,
     frame=single,
-    rulecolor=\color{codegray},
+    rulecolor=\color{black},
     numbers=none,
     tabsize=4,
     showstringspaces=false,
-    commentstyle=\color{codegray}\itshape,
-    keywordstyle=\color{codeblue}\bfseries,
-    stringstyle=\color{codegreen},
+    commentstyle=\itshape,
+    keywordstyle=\bfseries,
+    stringstyle={},
 }
 
 \lstdefinestyle{cpp}{
@@ -77,67 +65,30 @@
     basicstyle=\ttfamily\footnotesize,
     breaklines=false,
     frame=single,
-    rulecolor=\color{codegray},
+    rulecolor=\color{black},
     numbers=none,
     tabsize=2,
     showstringspaces=false,
     literate={█}{{\textblock}}1
-             {░}{{\textcolor{codegray}{\textblock}}}1
-             {▼}{{\textcolor{okgreen}{$\blacktriangledown$}}}1
-             {▲}{{\textcolor{warnred}{$\blacktriangle$}}}1
-             {✅}{{\textcolor{okgreen}{\ding{51}}}}1
-             {❌}{{\textcolor{warnred}{\ding{55}}}}1
-             {⚠}{{\textcolor{warnyellow}{$\triangle$!}}}1,
+             {░}{{\textblock}}1
+             {▼}{{$\blacktriangledown$}}1
+             {▲}{{$\blacktriangle$}}1
+             {✅}{{\ding{51}}}1
+             {❌}{{\ding{55}}}1
+             {⚠}{{$\triangle$!}}1,
 }
 
 \lstset{style=code}
-
-% --- tcolorbox environments ---
-\newtcolorbox{infobox}[1][]{
-    colback=lightblue,
-    colframe=codeblue,
-    fonttitle=\bfseries,
-    title=#1,
-    boxrule=0.5pt,
-    arc=2pt,
-}
-
-\newtcolorbox{warnbox}[1][]{
-    colback=lightyellow,
-    colframe=warnyellow,
-    fonttitle=\bfseries,
-    title=#1,
-    boxrule=0.5pt,
-    arc=2pt,
-}
-
-\newtcolorbox{successbox}[1][]{
-    colback=lightgreen,
-    colframe=okgreen,
-    fonttitle=\bfseries,
-    title=#1,
-    boxrule=0.5pt,
-    arc=2pt,
-}
-
-\newtcolorbox{dangerbox}[1][]{
-    colback=lightred,
-    colframe=warnred,
-    fonttitle=\bfseries,
-    title=#1,
-    boxrule=0.5pt,
-    arc=2pt,
-}
 
 % --- Custom commands ---
 \newcommand{\tactic}[1]{\textbf{#1}}
 \newcommand{\proto}[1]{\textsc{#1}}
 \newcommand{\hexval}[1]{\texttt{0x#1}}
-\newcommand{\freewin}{\texorpdfstring{\textcolor{okgreen}{\ding{51}\,Free Win}}{(Free Win)}}
-\newcommand{\implemented}{\texorpdfstring{\textcolor{codeblue}{\ding{51}\,Implemented}}{(Implemented)}}
-\newcommand{\metricdown}{\textcolor{okgreen}{$\blacktriangledown$}}
-\newcommand{\metricup}{\textcolor{warnred}{$\blacktriangle$}}
-\newcommand{\metriceq}{\textcolor{codegray}{$=$}}
+\newcommand{\freewin}{\texorpdfstring{\ding{51}\,Free Win}{(Free Win)}}
+\newcommand{\implemented}{\texorpdfstring{\ding{51}\,Implemented}{(Implemented)}}
+\newcommand{\metricdown}{$\blacktriangledown$}
+\newcommand{\metricup}{$\blacktriangle$}
+\newcommand{\metriceq}{$=$}
 
 % --- Header/Footer ---
 \pagestyle{fancy}
@@ -147,18 +98,18 @@
 
 % --- Section formatting ---
 \titleformat{\section}
-    {\Large\bfseries\color{headerblue}}{\thesection}{1em}{}
+    {\Large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}
-    {\large\bfseries\color{headerblue}}{\thesubsection}{1em}{}
+    {\large\bfseries}{\thesubsection}{1em}{}
 \titleformat{\subsubsection}
-    {\normalsize\bfseries\color{headerblue}}{\thesubsubsection}{1em}{}
+    {\normalsize\bfseries}{\thesubsubsection}{1em}{}
 
 % --- Hyperref setup ---
 \hypersetup{
     colorlinks=true,
-    linkcolor=codeblue,
-    urlcolor=codeblue,
-    citecolor=codeblue,
+    linkcolor=black,
+    urlcolor=black,
+    citecolor=black,
     pdftitle={Protocol Analysis \& Optimization Report},
     pdfauthor={InEar Teensy EEG Project},
     pdfsubject={EEG Streaming Protocol Analysis},
@@ -180,17 +131,16 @@
 \begin{titlepage}
 \centering
 \vspace*{3cm}
-{\Huge\bfseries\color{headerblue} Protocol Analysis \&\\[0.3em] Optimization Report\par}
+{\Huge\bfseries Protocol Analysis \&\\[0.3em] Optimization Report\par}
 \vspace{1.5cm}
 {\Large InEar Teensy EEG Streaming Protocols\\[0.5em]
 Findings, Comparisons \& Optimization Tactics\par}
 \vspace{2cm}
 {\large February 2026\par}
 \vspace{3cm}
-\begin{tcolorbox}[colback=lightblue, colframe=codeblue, width=0.8\textwidth, arc=3pt]
-\centering
+\fbox{\parbox{0.75\textwidth}{\centering
 \textbf{Key Finding:} The optimized protocol saves ${\sim}49\%$ bandwidth by only sending auxiliary sensor data when it actually changes, while maintaining identical EEG quality.
-\end{tcolorbox}
+}}
 \vfill
 {\small Generated from analysis of the \texttt{open-ephys-eeg-tools} repository\\
 OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
@@ -306,9 +256,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
     \item \textbf{END} (1\,B): Stop byte (\hexval{C0}--\hexval{C6}), also encodes packet type
 \end{itemize}
 
-\begin{warnbox}[Note]
-No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ slower baud rate, fewer channels possible.
-\end{warnbox}
+\textbf{Note to self:} No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ slower baud rate, fewer channels possible.
 
 \subsection{InEar Teensy Original --- 56 Bytes}
 
@@ -357,9 +305,7 @@ END & 2\,B & Footer: \hexval{C0}\,\hexval{C0} \\
 \caption{InEar Original field descriptions}
 \end{table}
 
-\begin{dangerbox}[Waste]
-13 bytes of padding per packet $\times$ 1000\,packets/sec = \textbf{13,000\,B/s of nothing}. Sends ALL sensor data every packet, even slow-changing values like temperature.
-\end{dangerbox}
+\textbf{Note to self:} 13 bytes of padding per packet $\times$ 1000\,packets/sec = \textbf{13,000\,B/s of nothing}. Sends ALL sensor data every packet, even slow-changing values like temperature.
 
 \subsection{InEar Teensy Optimized --- 26 to 55 Bytes}
 
@@ -477,10 +423,10 @@ EEG Channels & 8 & 5 & 5 \\
 EEG Resolution & 24-bit & 24-bit & 24-bit \\
 EEG Bytes/Sample & 24 & 15 & 15 \\
 Accelerometer & 3-axis, 16-bit & 3-axis, 16-bit & 3-axis, 16-bit \\
-PPG (Heart) & \textcolor{warnred}{\ding{55}} None & 3ch $\times$ 48-bit (18\,B!) & 3ch $\times$ 48-bit \\
-Temperature & \textcolor{warnred}{\ding{55}} None & 16-bit & 16-bit \\
-Battery & \textcolor{warnred}{\ding{55}} None & 16-bit & 16-bit \\
-Sync/Trigger & \textcolor{warnred}{\ding{55}} None & 16-bit & \textcolor{warnred}{\ding{55}} Removed \\
+PPG (Heart) & \ding{55} None & 3ch $\times$ 48-bit (18\,B!) & 3ch $\times$ 48-bit \\
+Temperature & \ding{55} None & 16-bit & 16-bit \\
+Battery & \ding{55} None & 16-bit & 16-bit \\
+Sync/Trigger & \ding{55} None & 16-bit & \ding{55} Removed \\
 Marker & Via footer byte & 1 byte & 1 byte (optional) \\
 Timestamp & Via aux (optional) & 4 bytes & 4 bytes \\
 \hline
@@ -536,9 +482,7 @@ If OpenBCI Cyton needed to send the same sensor suite as InEar at 1000\,Hz:
 \text{Available (8-N-1):}\quad & 115{,}200 \div 10 = 11{,}520 \text{\,B/s max} \nonumber
 \end{align}
 
-\begin{dangerbox}[Physically Impossible]
-OpenBCI would need $4.2\times$ more bandwidth than available. This is why direct OpenBCI-vs-InEar bandwidth comparisons are misleading --- they solve fundamentally different problems with fundamentally different hardware.
-\end{dangerbox}
+\textbf{Note to self:} OpenBCI would need $4.2\times$ more bandwidth than available. This is why direct OpenBCI-vs-InEar bandwidth comparisons are misleading --- they solve fundamentally different problems with fundamentally different hardware.
 
 % =============================================================================
 \section{Bandwidth Analysis}
@@ -572,7 +516,7 @@ Sample rate & 250\,Hz & 1,000\,Hz & 1,000\,Hz \\
 Actual B/s & 8,250 & 56,000 & ${\sim}$28,500 \\
 Wire bit rate & 82,500\,bps & 560,000\,bps & ${\sim}$285,000\,bps \\
 \textbf{Utilization} & \textbf{71.6\%} & \textbf{28.0\%} & \textbf{14.3\%} \\
-\textbf{Headroom} & \textbf{28.4\%} \textcolor{warnyellow}{$\triangle$} & \textbf{72.0\%} \textcolor{okgreen}{\ding{51}} & \textbf{85.7\%} \textcolor{okgreen}{\ding{51}} \\
+\textbf{Headroom} & \textbf{28.4\%} $\triangle$ & \textbf{72.0\%} \ding{51} & \textbf{85.7\%} \ding{51} \\
 \hline
 \end{tabular}
 \caption{Bandwidth utilization comparison}
@@ -586,26 +530,26 @@ Wire bit rate & 82,500\,bps & 560,000\,bps & ${\sim}$285,000\,bps \\
 \begin{tikzpicture}[x=0.2cm, y=1cm]
     % OpenBCI
     \node[anchor=east] at (-1, 2) {\small\textbf{OpenBCI Cyton}};
-    \fill[codeblue] (0, 1.7) rectangle (35.8, 2.3);
-    \fill[backgray] (35.8, 1.7) rectangle (50, 2.3);
+    \fill[black] (0, 1.7) rectangle (35.8, 2.3);
+    \fill[lightgray] (35.8, 1.7) rectangle (50, 2.3);
     \draw (0, 1.7) rectangle (50, 2.3);
     \node at (25, 2) {\small\color{white}\textbf{71.6\%}};
-    \node[anchor=west] at (51, 2) {\small\textcolor{warnyellow}{TIGHT!}};
+    \node[anchor=west] at (51, 2) {\small\textbf{TIGHT!}};
     
     % InEar Original
     \node[anchor=east] at (-1, 1) {\small\textbf{InEar Original}};
-    \fill[codeblue] (0, 0.7) rectangle (14, 1.3);
-    \fill[backgray] (14, 0.7) rectangle (50, 1.3);
+    \fill[black] (0, 0.7) rectangle (14, 1.3);
+    \fill[lightgray] (14, 0.7) rectangle (50, 1.3);
     \draw (0, 0.7) rectangle (50, 1.3);
     \node at (7, 1) {\small\color{white}\textbf{28\%}};
-    \node at (32, 1) {\small\color{codegray} headroom};
+    \node at (32, 1) {\small headroom};
     
     % InEar Optimized
     \node[anchor=east] at (-1, 0) {\small\textbf{InEar Optimized}};
-    \fill[codeblue] (0, -0.3) rectangle (7.15, 0.3);
-    \fill[backgray] (7.15, -0.3) rectangle (50, 0.3);
+    \fill[black] (0, -0.3) rectangle (7.15, 0.3);
+    \fill[lightgray] (7.15, -0.3) rectangle (50, 0.3);
     \draw (0, -0.3) rectangle (50, 0.3);
-    \node[anchor=west] at (8, 0) {\small\color{codegray} 14.3\% --- massive headroom};
+    \node[anchor=west] at (8, 0) {\small 14.3\% --- massive headroom};
 \end{tikzpicture}
 \caption{Bandwidth utilization comparison (bar chart). Each bar represents the percentage of the serial link capacity used.}
 \label{fig:headroom}
@@ -719,16 +663,16 @@ This is perfectly fine for slow signals because the accelerometer hasn't meaning
 \begin{tabular}{|l|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{3.8cm}|}
 \hline
 \textbf{Dimension} & \textbf{InEar Original} & \textbf{InEar Optimized} & \textbf{Winner} \\\hline
-Bandwidth & 56\,KB/s & ${\sim}$28.5\,KB/s & \textcolor{okgreen}{\ding{51}} Optimized (49\% less) \\
-Latency & 280\,$\mu$s wire & 130--270\,$\mu$s wire & \textcolor{okgreen}{\ding{51}} Optimized \\
+Bandwidth & 56\,KB/s & ${\sim}$28.5\,KB/s & \ding{51} Optimized (49\% less) \\
+Latency & 280\,$\mu$s wire & 130--270\,$\mu$s wire & \ding{51} Optimized \\
 Integrity & XOR checksum & XOR checksum & = Tie \\
-Parser Complexity & Simple: fixed offsets & Complex: 14 types & \textcolor{okgreen}{\ding{51}} Original \\
-Firmware Complexity & Simple: fill 56\,B & Moderate: variable & \textcolor{okgreen}{\ding{51}} Original \\
-Jitter Robustness & Excellent: uniform & Good: variable sizes & \textcolor{okgreen}{\ding{51}} Original \\
-Packet Loss Robustness & Good: self-contained & Moderate: stale data & \textcolor{okgreen}{\ding{51}} Original \\
-Headroom & 72\% free & 86\% free & \textcolor{okgreen}{\ding{51}} Optimized \\
-Memory Efficiency & 13\,B wasted/pkt & Zero waste & \textcolor{okgreen}{\ding{51}} Optimized \\
-Extensibility & 13 reserved bytes & New packet type needed & \textcolor{okgreen}{\ding{51}} Original \\
+Parser Complexity & Simple: fixed offsets & Complex: 14 types & \ding{51} Original \\
+Firmware Complexity & Simple: fill 56\,B & Moderate: variable & \ding{51} Original \\
+Jitter Robustness & Excellent: uniform & Good: variable sizes & \ding{51} Original \\
+Packet Loss Robustness & Good: self-contained & Moderate: stale data & \ding{51} Original \\
+Headroom & 72\% free & 86\% free & \ding{51} Optimized \\
+Memory Efficiency & 13\,B wasted/pkt & Zero waste & \ding{51} Optimized \\
+Extensibility & 13 reserved bytes & New packet type needed & \ding{51} Original \\
 \hline
 \end{tabular}
 \caption{Head-to-head trade-off comparison}
@@ -919,9 +863,7 @@ Delta:     sample1 = 123456    -> 3 bytes (24-bit, keyframe)
 Savings: 9 bytes -> 5 bytes for 3 samples (44%)
 \end{lstlisting}
 
-\begin{dangerbox}[Critical Trade-off: Error Propagation]
-If you lose ONE packet, every subsequent sample is corrupted until the next keyframe. Requires periodic absolute keyframes (e.g., every 100th sample) and loss detection via sequence number gaps. Potential savings: 40--60\% for EEG data specifically.
-\end{dangerbox}
+\textbf{Note to self:} If you lose ONE packet, every subsequent sample is corrupted until the next keyframe. Requires periodic absolute keyframes (e.g., every 100th sample) and loss detection via sequence number gaps. Potential savings: 40--60\% for EEG data specifically.
 
 % --- 1C ---
 \subsubsection{1C --- Variable-Width Integers (VarInt)}
@@ -930,10 +872,10 @@ Encode values using a variable number of bytes --- small values use fewer bytes 
 
 \textbf{Trade-off}:
 \begin{itemize}
-    \item[\textcolor{warnred}{\ding{55}}] Packets have \textbf{unpredictable size} --- parser can't jump to fixed offsets
-    \item[\textcolor{warnred}{\ding{55}}] Bit-level parsing is expensive
-    \item[\textcolor{warnred}{\ding{55}}] Cannot pre-validate packet size
-    \item[\textcolor{okgreen}{\ding{51}}] Average savings of ${\sim}$30\% combined with delta encoding
+    \item[\ding{55}] Packets have \textbf{unpredictable size} --- parser can't jump to fixed offsets
+    \item[\ding{55}] Bit-level parsing is expensive
+    \item[\ding{55}] Cannot pre-validate packet size
+    \item[\ding{51}] Average savings of ${\sim}$30\% combined with delta encoding
 \end{itemize}
 
 \textbf{Verdict}: High complexity for moderate savings. Better suited for file formats than real-time streams.
@@ -987,9 +929,9 @@ Pack $N$ samples into a single packet, amortizing header/footer/checksum overhea
 
 \textbf{Trade-off}:
 \begin{itemize}
-    \item[\textcolor{warnred}{\ding{55}}] Latency increases by $N\times$ (at 1\,kHz with $N=4$: 4\,ms instead of 1\,ms)
-    \item[\textcolor{warnred}{\ding{55}}] Losing one packet loses $N$ samples
-    \item[\textcolor{okgreen}{\ding{51}}] At $N=4$, overhead drops from 42\% to 17\%
+    \item[\ding{55}] Latency increases by $N\times$ (at 1\,kHz with $N=4$: 4\,ms instead of 1\,ms)
+    \item[\ding{55}] Losing one packet loses $N$ samples
+    \item[\ding{51}] At $N=4$, overhead drops from 42\% to 17\%
 \end{itemize}
 
 \textbf{Verdict}: Poor fit for real-time neurofeedback; good for high-latency-tolerant recording.
@@ -1071,7 +1013,7 @@ Same 1-byte cost, dramatically better error detection.
 Single-bit errors & 100\% & 100\% \\
 2-bit errors & 100\% & 100\% \\
 Odd \# of bit errors & 100\% & 100\% \\
-Even \# of bit errors & \textcolor{warnred}{0\%!!} & 99.6\% \\
+Even \# of bit errors & \textbf{0\%!!} & 99.6\% \\
 Burst errors ($\leq$8 bit) & ${\sim}$50\% & 100\% \\
 Random errors & ${\sim}$50\% & 99.6\% \\
 \hline
@@ -1296,10 +1238,10 @@ Use ADS1299's built-in impedance mode to check electrode contact quality.
 \hline
 \textbf{Impedance} & \textbf{Quality} & \textbf{Interpretation} \\\hline
 \hline
-$< 10$\,k$\Omega$ & \textcolor{okgreen}{\ding{51}} Good & Gel electrodes, well-placed \\
-$10$--$50$\,k$\Omega$ & \textcolor{warnyellow}{$\triangle$} Acceptable & Dry electrodes, may work \\
-$> 50$\,k$\Omega$ & \textcolor{warnred}{\ding{55}} Poor & Needs adjustment \\
-$> 1$\,M$\Omega$ & \textcolor{warnred}{\ding{55}} None & No electrode detected \\
+$< 10$\,k$\Omega$ & \ding{51} Good & Gel electrodes, well-placed \\
+$10$--$50$\,k$\Omega$ & $\triangle$ Acceptable & Dry electrodes, may work \\
+$> 50$\,k$\Omega$ & \ding{55} Poor & Needs adjustment \\
+$> 1$\,M$\Omega$ & \ding{55} None & No electrode detected \\
 \hline
 \end{tabular}
 \caption{Electrode impedance quality thresholds}
@@ -1323,8 +1265,8 @@ ADS1299 supports up to 16\,kHz. Bandwidth implications:
 1,000\,Hz & ${\sim}$28,500 & 14.3\% & Current \\
 2,000\,Hz & ${\sim}$57,000 & 28.5\% & OK \\
 4,000\,Hz & ${\sim}$114,000 & 57.0\% & Tight \\
-8,000\,Hz & ${\sim}$228,000 & 114\% & \textcolor{warnred}{Exceeds 2\,Mbaud!} \\
-16,000\,Hz & ${\sim}$456,000 & 228\% & \textcolor{warnred}{Need 6\,Mbaud+} \\
+8,000\,Hz & ${\sim}$228,000 & 114\% & \textbf{Exceeds 2\,Mbaud!} \\
+16,000\,Hz & ${\sim}$456,000 & 228\% & \textbf{Need 6\,Mbaud+} \\
 \hline
 \end{tabular}
 \caption{Sample rate vs.\ bandwidth utilization}
@@ -1683,11 +1625,9 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 \caption{Fundamental hardware differences between OpenBCI and InEar}
 \end{table}
 
-\begin{infobox}[Key Insight]
-\textbf{OpenBCI's 71.6\% utilization is not ``worse''} --- it's operating near the physical limit of its wireless radio. It can't go faster without changing hardware. The InEar protocols have abundant headroom because USB is orders of magnitude faster than a 2.4\,GHz radio link.
+\textbf{Note to self:} OpenBCI's 71.6\% utilization is not ``worse'' --- it's operating near the physical limit of its wireless radio. It can't go faster without changing hardware. The InEar protocols have abundant headroom because USB is orders of magnitude faster than a 2.4\,GHz radio link.
 
 \textbf{If OpenBCI had to carry InEar's data}, it would need $>4\times$ its available bandwidth --- physically impossible without hardware changes.
-\end{infobox}
 
 % =============================================================================
 \section{Appendix: Serial 8-N-1 Bandwidth Math}
@@ -1817,7 +1757,7 @@ These tables give the exact byte offset, size, and data format of every field in
 37--38 & 2\,B & Aux\,9 (Sync) & int16 BE & External trigger \\
 \hline
 39 & 1\,B & Marker & uint8 & Event marker byte \\
-40--52 & 13\,B & \textcolor{warnred}{Reserved} & zeros & \textcolor{warnred}{Padding --- WASTED} \\
+40--52 & 13\,B & \textbf{Reserved} & zeros & \textbf{Padding --- WASTED} \\
 \hline
 53 & 1\,B & Checksum & uint8 & XOR of bytes 0--52 \\
 54 & 1\,B & Footer\,1 & \hexval{C0} & End byte 1 (constant) \\
@@ -1989,9 +1929,7 @@ Footer & 24--25 & 30--31 & 42--43 & 48--49 & 28--29 & 34--35 & 52--53 \\
 \end{tabular}
 \end{table}
 
-\begin{infobox}[How to read this table]
-For example, to read accelerometer Y from a Type \hexval{03} (EEG+Accel+PPG) packet: go to the Accel row $\rightarrow$ offsets 23--28 $\rightarrow$ Accel\,Y is at relative +2 within the block $\rightarrow$ \textbf{absolute offset 25--26}, 16-bit signed big-endian.
-\end{infobox}
+\textbf{Note to self:} To read accelerometer Y from a Type \hexval{03} (EEG+Accel+PPG) packet: go to the Accel row $\rightarrow$ offsets 23--28 $\rightarrow$ Accel\,Y is at relative +2 within the block $\rightarrow$ \textbf{absolute offset 25--26}, 16-bit signed big-endian.
 
 % =============================================================================
 \newpage
