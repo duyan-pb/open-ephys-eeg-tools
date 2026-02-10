@@ -178,6 +178,7 @@
 \begin{document}
 
 % --- Title Page ---
+\hypersetup{pageanchor=false}
 \begin{titlepage}
 \centering
 \vspace*{3cm}
@@ -198,6 +199,7 @@ OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
 \end{titlepage}
 
 % --- Table of Contents ---
+\hypersetup{pageanchor=true}
 \pagenumbering{arabic}
 \tableofcontents
 \newpage
@@ -213,7 +215,7 @@ This document analyzes three EEG streaming protocols used in the Open Ephys ecos
 \caption{Protocol overview comparison}
 \label{tab:executive-summary}
 \small
-\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\begin{tabularx}{\textwidth}{|l|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
 & \textbf{OpenBCI Cyton} & \textbf{InEar Original} & \textbf{InEar Optimized} \\\hline
 \hline
@@ -281,8 +283,8 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
 \centering
 \begin{bytefield}[bitwidth=0.82em, bitheight=2.5em]{33}
     \bitheader{0,1,2,4,7,10,13,16,19,22,25,26,32} \\
-    \bitbox{1}{\tiny\texttt{0xA0}\\START} &
-    \bitbox{1}{\tiny SEQ} &
+    \bitbox{1}{\scalebox{.7}{\tiny\texttt{0xA0}}\\\scalebox{.7}{\tiny START}} &
+    \bitbox{1}{\scalebox{.7}{\tiny SEQ}} &
     \bitbox{3}{\tiny Ch1} &
     \bitbox{3}{\tiny Ch2} &
     \bitbox{3}{\tiny Ch3} &
@@ -292,7 +294,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
     \bitbox{3}{\tiny Ch7} &
     \bitbox{3}{\tiny Ch8} &
     \bitbox{6}{\tiny AUX (accel)} &
-    \bitbox{1}{\tiny\texttt{0xCn}\\END}
+    \bitbox{1}{\scalebox{.7}{\tiny\texttt{0xCn}}\\\scalebox{.7}{\tiny END}}
 \end{bytefield}
 \caption{OpenBCI Cyton packet structure (33 bytes)}
 \label{fig:openbci-packet}
@@ -316,18 +318,18 @@ No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ s
 \centering
 \begin{bytefield}[bitwidth=0.55em, bitheight=2.5em]{56}
     \bitheader{0,2,6,7,22,28,46,48,50,52,53,54} \\
-    \bitbox{2}{\tiny START\\A5\,5A} &
-    \bitbox{4}{\tiny TIMESTAMP} &
-    \bitbox{1}{\tiny M} &
+    \bitbox{2}{\scalebox{.65}{\tiny START}\\\scalebox{.6}{\tiny A5\,5A}} &
+    \bitbox{4}{\scalebox{.5}{\tiny TIMESTAMP}} &
+    \bitbox{1}{\scalebox{.7}{\tiny M}} &
     \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
     \bitbox{6}{\tiny ACCEL} &
     \bitbox{18}{\tiny PPG (3ch $\times$ 6\,B)} &
     \bitbox{2}{\tiny T} &
     \bitbox{2}{\tiny B} &
     \bitbox{2}{\tiny S} &
-    \bitbox{1}{\tiny C} &
-    \bitbox{1}{\tiny CHK} &
-    \bitbox{2}{\tiny END\\C0\,C0}
+    \bitbox{1}{\scalebox{.7}{\tiny C}} &
+    \bitbox{1}{\scalebox{.6}{\tiny CHK}} &
+    \bitbox{2}{\scalebox{.65}{\tiny END}\\\scalebox{.6}{\tiny C0\,C0}}
 \end{bytefield}
 \caption{InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter. 13 bytes of padding between Sync and Counter are omitted from diagram.}
 \label{fig:inear-original-packet}
@@ -386,13 +388,13 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 \centering
 \begin{bytefield}[bitwidth=1.1em, bitheight=2.5em]{26}
     \bitheader{0,2,3,4,8,23,24,25} \\
-    \bitbox{2}{\tiny START\\A5\,5A} &
-    \bitbox{1}{\tiny TYPE\\\hexval{00}} &
-    \bitbox{1}{\tiny SEQ} &
+    \bitbox{2}{\scalebox{.8}{\tiny START}\\\scalebox{.7}{\tiny A5\,5A}} &
+    \bitbox{1}{\scalebox{.7}{\tiny TYPE}\\\scalebox{.7}{\hexval{00}}} &
+    \bitbox{1}{\scalebox{.8}{\tiny SEQ}} &
     \bitbox{4}{\tiny TIMESTAMP} &
     \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
-    \bitbox{1}{\tiny CHK} &
-    \bitbox{2}{\tiny END\\C0\,C0}
+    \bitbox{1}{\scalebox{.7}{\tiny CHK}} &
+    \bitbox{2}{\scalebox{.8}{\tiny END}\\\scalebox{.7}{\tiny C0\,C0}}
 \end{bytefield}
 \caption{EEG-only packet (Type \hexval{00}) --- 749 per second}
 \end{figure}
@@ -403,14 +405,14 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 \centering
 \begin{bytefield}[bitwidth=0.9em, bitheight=2.5em]{32}
     \bitheader{0,2,3,4,8,23,29,30,31} \\
-    \bitbox{2}{\tiny START} &
-    \bitbox{1}{\tiny TYPE\\\hexval{01}} &
-    \bitbox{1}{\tiny SEQ} &
+    \bitbox{2}{\scalebox{.8}{\tiny START}} &
+    \bitbox{1}{\scalebox{.7}{\tiny TYPE}\\\scalebox{.7}{\hexval{01}}} &
+    \bitbox{1}{\scalebox{.8}{\tiny SEQ}} &
     \bitbox{4}{\tiny TS} &
     \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
     \bitbox{6}{\tiny ACCEL\\X,Y,Z} &
-    \bitbox{1}{\tiny CHK} &
-    \bitbox{2}{\tiny END}
+    \bitbox{1}{\scalebox{.7}{\tiny CHK}} &
+    \bitbox{2}{\scalebox{.8}{\tiny END}}
 \end{bytefield}
 \caption{EEG + Accelerometer packet (Type \hexval{01}) --- 200 per second}
 \end{figure}
@@ -421,17 +423,17 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 \centering
 \begin{bytefield}[bitwidth=0.56em, bitheight=2.5em]{54}
     \bitheader{0,2,3,4,8,23,29,47,49,51,52,53} \\
-    \bitbox{2}{\tiny ST} &
-    \bitbox{1}{\tiny T\\\hexval{06}} &
-    \bitbox{1}{\tiny S} &
+    \bitbox{2}{\scalebox{.7}{\tiny ST}} &
+    \bitbox{1}{\scalebox{.6}{\tiny T}\\\scalebox{.55}{\hexval{06}}} &
+    \bitbox{1}{\scalebox{.7}{\tiny S}} &
     \bitbox{4}{\tiny TS} &
     \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
     \bitbox{6}{\tiny ACCEL} &
     \bitbox{18}{\tiny PPG (3ch $\times$ 6\,B)} &
-    \bitbox{2}{\tiny TMP} &
-    \bitbox{2}{\tiny BAT} &
-    \bitbox{1}{\tiny CK} &
-    \bitbox{2}{\tiny END}
+    \bitbox{2}{\scalebox{.6}{\tiny TMP}} &
+    \bitbox{2}{\scalebox{.6}{\tiny BAT}} &
+    \bitbox{1}{\scalebox{.55}{\tiny CK}} &
+    \bitbox{2}{\scalebox{.7}{\tiny END}}
 \end{bytefield}
 \caption{Full sync packet (Type \hexval{06}) --- 1 per second}
 \end{figure}
@@ -716,7 +718,7 @@ This is perfectly fine for slow signals because the accelerometer hasn't meaning
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{|l|C{2.8cm}|C{2.8cm}|C{2.8cm}|}
+\begin{tabularx}{\textwidth}{|l|C{2.8cm}|C{2.8cm}|>{\raggedright\arraybackslash}C{2.8cm}|}
 \hline
 \textbf{Dimension} & \textbf{InEar Original} & \textbf{InEar Optimized} & \textbf{Winner} \\\hline
 \hline
@@ -1027,9 +1029,8 @@ Teensy~4.1 (ARM Cortex-M7, 600\,MHz) supports up to 6\,Mbaud.
 \caption{Wire time at various baud rates}
 \end{table}
 
-\textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits,
-cable quality critical at $>$3\,Mbaud.
-Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.
+{\sloppy \textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits, cable quality critical at $>$3\,Mbaud.
+Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.\par}
 
 % --- 2C ---
 \subsubsection{2C --- USB Flush Optimization}
@@ -1695,8 +1696,8 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 \section{Appendix: Serial 8-N-1 Bandwidth Math}
 \label{sec:appendix-serial-math}
 
-A common mistake in serial bandwidth calculations is using
-\texttt{baud\_rate\,/\,8} instead of \texttt{baud\_rate\,/\,10}.
+{\sloppy A common mistake in serial bandwidth calculations is using
+\texttt{baud\_rate~/~8} instead of \texttt{baud\_rate~/~10}.\par}
 
 \subsection{What ``8-N-1'' Means}
 
