@@ -205,7 +205,6 @@ A wired USB protocol for a Teensy~4.1 microcontroller with ADS1299 EEG front-end
     \item \textbf{9 auxiliary channels}: accelerometer (3), PPG heart sensor (3), temperature, battery, sync
     \item \textbf{1000\,Hz} sample rate
     \item \textbf{Fixed 56-byte packets} --- every packet carries ALL sensor data
-    \item \textbf{13 bytes of padding} reserved for future use (wasted bandwidth)
     \item XOR checksum for error detection
 \end{itemize}
 
@@ -277,7 +276,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
     \bitbox{1}{\scalebox{.5}{\tiny CHK}} &
     \bitbox{2}{\scalebox{.4}{\tiny END}\\\scalebox{.35}{\tiny C0\,C0}}
 \end{bytefield}
-\caption{InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter. 13 bytes of padding between Sync and Counter are omitted from diagram.}
+\caption{InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter.}
 \label{fig:inear-original-packet}
 \end{figure}
 
@@ -297,7 +296,7 @@ PPG & 18\,B & 3 channels $\times$ 48-bit (Red, IR, Green) \\
 TEMP & 2\,B & Body temperature \\
 BATTERY & 2\,B & Battery voltage \\
 SYNC & 2\,B & External trigger signal \\
-PADDING & 13\,B & Reserved (all zeros --- \textbf{wasted!}) \\
+COUNTER & 1\,B & Packet counter (0--255) \\
 CHECKSUM & 1\,B & XOR of all preceding bytes \\
 END & 2\,B & Footer: \hexval{C0}\,\hexval{C0} \\
 \hline
@@ -305,7 +304,7 @@ END & 2\,B & Footer: \hexval{C0}\,\hexval{C0} \\
 \caption{InEar Original field descriptions}
 \end{table}
 
-\textbf{Note to self:} 13 bytes of padding per packet $\times$ 1000\,packets/sec = \textbf{13,000\,B/s of nothing}. Sends ALL sensor data every packet, even slow-changing values like temperature.
+\textbf{Note to self:} Sends ALL sensor data every packet, even slow-changing values like temperature and battery that update far less frequently.
 
 \subsection{InEar Teensy Optimized --- 26 to 55 Bytes}
 
@@ -567,13 +566,12 @@ EEG (brain signals) & 15,000 & 26.8\% \\
 Accelerometer & 6,000 & 10.7\% \\
 Temp + Battery & 4,000 & 7.1\% \\
 Sync & 2,000 & 3.6\% \\
-\textbf{Padding (wasted!)} & \textbf{13,000} & \textbf{23.2\%} \\
-Overhead (hdr+chk+ftr) & 6,000 & 10.7\% \\
+Overhead (hdr+ts+mkr+ctr+chk+ftr) & 11,000 & 19.6\% \\
 \hline
 \textbf{Total} & \textbf{56,000} & \\
 \hline
 \end{tabular}
-\caption{Byte budget breakdown --- InEar Original. PPG + Padding = 31,000\,B/s = 55\% of all traffic!}
+\caption{Byte budget breakdown --- InEar Original. PPG alone = 18,000\,B/s = 32\% of all traffic!}
 \end{table}
 
 \subsection{Where The Bytes Go --- InEar Optimized}
@@ -605,7 +603,7 @@ Headers/footers & ${\sim}$10,160 & 35.6\% \\
 OpenBCI Cyton (250 Hz, uniform):
  --[33B]---[33B]---[33B]---[33B]---[33B]---  (4 ms apart)
 
-InEar Original (1000 Hz, uniform but wasteful):
+InEar Original (1000 Hz, uniform):
  -[56]-[56]-[56]-[56]-[56]-[56]-[56]-[56]-  (1 ms apart, same every time)
 
 InEar Optimized (1000 Hz, variable):
@@ -671,8 +669,8 @@ Firmware Complexity & Simple: fill 56\,B & Moderate: variable & \ding{51} Origin
 Jitter Robustness & Excellent: uniform & Good: variable sizes & \ding{51} Original \\
 Packet Loss Robustness & Good: self-contained & Moderate: stale data & \ding{51} Original \\
 Headroom & 72\% free & 86\% free & \ding{51} Optimized \\
-Memory Efficiency & 13\,B wasted/pkt & Zero waste & \ding{51} Optimized \\
-Extensibility & 13 reserved bytes & New packet type needed & \ding{51} Original \\
+Memory Efficiency & All bytes used & Zero overhead & = Tie \\
+Extensibility & Fixed layout & New packet type needed & \ding{51} Original \\
 \hline
 \end{tabular}
 \caption{Head-to-head trade-off comparison}
@@ -697,7 +695,6 @@ Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tact
 \tactic{1A} \implemented & Multi-rate aux sampling & Send aux sensors only at their Nyquist rate \\
 \tactic{1B} & Delta encoding for EEG & Send differences instead of absolute values \\
 \tactic{1C} & Variable-width integers & Small values use fewer bytes \\
-\tactic{1D} \implemented & Eliminate padding & Remove the 13 wasted bytes \\
 \tactic{1E} & PPG to 24-bit & PPG ADCs are 18--20\,bit; 24-bit is plenty \\
 \tactic{1F} & Smaller header & Reduce or compress header fields \\
 \tactic{1G} & Multi-sample batching & Pack N samples per packet, amortize overhead \\
@@ -879,19 +876,6 @@ Encode values using a variable number of bytes --- small values use fewer bytes 
 \end{itemize}
 
 \textbf{Verdict}: High complexity for moderate savings. Better suited for file formats than real-time streams.
-
-% --- 1D ---
-\subsubsection{1D --- Eliminate Reserved/Padding Bytes \implemented}
-
-The original protocol has 13 reserved bytes in every packet, filled with zeros. The optimized protocol removes them entirely.
-
-\[
-13 \text{\,bytes} \times 1000 \text{\,packets/sec} = 13{,}000 \text{\,B/s} = 130{,}000 \text{\,bits/sec} \;\textbf{WASTED}
-\]
-
-\textbf{Trade-off}: Removing reserved bytes means future sensors require defining a new packet type (which the optimized protocol already supports).
-
-\textbf{Impact}: Saves 13,000\,B/s --- more than the entire accelerometer data stream.
 
 % --- 1E ---
 \subsubsection{1E --- PPG to 24-bit (from 48-bit) \freewin}
@@ -1321,15 +1305,6 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 \metricup\metricup\metricup\ no fixed &
 \metricdown\metricdown\ unpredict. \\
 
-\tactic{1D} Rm.\ padding &
-\metricdown\ 13\,B &
-\metricdown\ 13\,B less &
-\metriceq &
-\metricdown\ less chksum &
-\metricdown\ less fill &
-\metricdown\ simpler &
-\metricdown\ less mask \\
-
 \tactic{1E} PPG 24-bit &
 \metricdown\ 9\,B/PPG &
 \metricdown\ 9\,B less &
@@ -1738,32 +1713,32 @@ These tables give the exact byte offset, size, and data format of every field in
 0 & 1\,B & Sync\,1 & \hexval{A5} & Header byte 1 (constant) \\
 1 & 1\,B & Sync\,2 & \hexval{5A} & Header byte 2 (constant) \\
 \hline
-2--5 & 4\,B & Sample Count & uint32 LE & Packet counter (little-endian) \\
+2--5 & 4\,B & Timestamp & uint32 BE & Microsecond timestamp \\
 \hline
-6--8 & 3\,B & EEG Ch\,1 & int24 BE & Channel 1, 24-bit signed \\
-9--11 & 3\,B & EEG Ch\,2 & int24 BE & Channel 2, 24-bit signed \\
-12--14 & 3\,B & EEG Ch\,3 & int24 BE & Channel 3, 24-bit signed \\
-15--17 & 3\,B & EEG Ch\,4 & int24 BE & Channel 4, 24-bit signed \\
-18--20 & 3\,B & EEG Ch\,5 & int24 BE & Channel 5, 24-bit signed \\
+6 & 1\,B & Marker & uint8 & Event marker byte \\
 \hline
-21--22 & 2\,B & Aux\,1 (Acc\,X) & int16 BE & Accelerometer X \\
-23--24 & 2\,B & Aux\,2 (Acc\,Y) & int16 BE & Accelerometer Y \\
-25--26 & 2\,B & Aux\,3 (Acc\,Z) & int16 BE & Accelerometer Z \\
-27--28 & 2\,B & Aux\,4 (PPG\,R) & int16 BE & PPG Red LED \\
-29--30 & 2\,B & Aux\,5 (PPG\,IR) & int16 BE & PPG IR LED \\
-31--32 & 2\,B & Aux\,6 (PPG\,G) & int16 BE & PPG Green LED \\
-33--34 & 2\,B & Aux\,7 (Temp) & int16 BE & Temperature (0.01\textdegree{}C) \\
-35--36 & 2\,B & Aux\,8 (Batt) & uint16 BE & Battery voltage (mV) \\
-37--38 & 2\,B & Aux\,9 (Sync) & int16 BE & External trigger \\
+7--9 & 3\,B & EEG Ch\,1 & int24 BE & Channel 1, 24-bit signed \\
+10--12 & 3\,B & EEG Ch\,2 & int24 BE & Channel 2, 24-bit signed \\
+13--15 & 3\,B & EEG Ch\,3 & int24 BE & Channel 3, 24-bit signed \\
+16--18 & 3\,B & EEG Ch\,4 & int24 BE & Channel 4, 24-bit signed \\
+19--21 & 3\,B & EEG Ch\,5 & int24 BE & Channel 5, 24-bit signed \\
 \hline
-39 & 1\,B & Marker & uint8 & Event marker byte \\
-40--52 & 13\,B & \textbf{Reserved} & zeros & \textbf{Padding --- WASTED} \\
+22--23 & 2\,B & Acc\,X & int16 BE & Accelerometer X \\
+24--25 & 2\,B & Acc\,Y & int16 BE & Accelerometer Y \\
+26--27 & 2\,B & Acc\,Z & int16 BE & Accelerometer Z \\
+28--33 & 6\,B & PPG\,Red & int48 BE & PPG Red LED (48-bit) \\
+34--39 & 6\,B & PPG\,IR & int48 BE & PPG IR LED (48-bit) \\
+40--45 & 6\,B & PPG\,Green & int48 BE & PPG Green LED (48-bit) \\
+46--47 & 2\,B & Temp & int16 BE & Temperature (0.01\textdegree{}C) \\
+48--49 & 2\,B & Battery & uint16 BE & Battery voltage (mV) \\
+50--51 & 2\,B & Sync & uint16 BE & External trigger \\
 \hline
+52 & 1\,B & Pkt Counter & uint8 & Packet counter (0--255) \\
 53 & 1\,B & Checksum & uint8 & XOR of bytes 0--52 \\
 54 & 1\,B & Footer\,1 & \hexval{C0} & End byte 1 (constant) \\
 55 & 1\,B & Footer\,2 & \hexval{C0} & End byte 2 (constant) \\
 \hline
-\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{56 bytes} (13 wasted)} \\
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{56 bytes}} \\
 \hline
 \end{tabular}
 \end{table}
@@ -1988,15 +1963,6 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 \metricup\ encoding &
 \metricup\metricup\metricup\ no fixed &
 \metricdown\metricdown\ unpredict. \\
-
-\tactic{1D} Rm.\ padding &
-\metricdown\ 13\,B &
-\metricdown\ 13\,B less &
-\metriceq &
-\metricdown\ less chksum &
-\metricdown\ less fill &
-\metricdown\ simpler &
-\metricdown\ less mask \\
 
 \tactic{1E} PPG 24-bit &
 \metricdown\ 9\,B/PPG &

@@ -64,7 +64,6 @@ A wired USB protocol for a Teensy 4.1 microcontroller with ADS1299 EEG front-end
 - **9 auxiliary channels**: accelerometer (3), PPG heart sensor (3), temperature, battery, sync
 - **1000 Hz** sample rate
 - **Fixed 56-byte packets** — every packet carries ALL sensor data
-- **13 bytes of padding** reserved for future use (wasted bandwidth)
 - XOR checksum for error detection
 
 ### 2.3 InEar Teensy Optimized
@@ -116,10 +115,10 @@ One packet = one snapshot of ALL sensors (brain + body + environment)
  │                                                                               │
  ▼                                                                               ▼
 ┌───────┬───────────┬────────┬─────────────────────┬─────────┬──────────────────────────┬─────┬────┬────┬──────────────┬─────┬───────┐
-│ START │ TIMESTAMP │ MARKER │     EEG (brain)     │  ACCEL  │      PPG (heart)         │TEMP │BATT│SYNC│   PADDING    │ CHK │  END  │
-│ A5 5A │  4 bytes  │  1 B   │ 5ch × 3B = 15 bytes │  6B     │   3ch × 6B = 18 bytes   │ 2B  │ 2B │ 2B │  13 bytes    │ 1B  │ C0 C0 │
+│ START │ TIMESTAMP │ MARKER │     EEG (brain)     │  ACCEL  │      PPG (heart)         │TEMP │BATT│SYNC│ CTR │ CHK │  END  │
+│ A5 5A │  4 bytes  │  1 B   │ 5ch × 3B = 15 bytes │  6B     │   3ch × 6B = 18 bytes   │ 2B  │ 2B │ 2B │  1B  │ 1B  │ C0 C0 │
 └───────┴───────────┴────────┴─────────────────────┴─────────┴──────────────────────────┴─────┴────┴────┴──────────────┴─────┴───────┘
-  2B         4B        1B             15B               6B              18B              2B   2B   2B       13B          1B     2B
+  2B         4B        1B             15B               6B              18B              2B   2B   2B   1B    1B     2B
 
  ┌──────────────────────────────────────────────────────────────────────────────┐
  │  START (2B)     → "New packet!" Two magic bytes: 0xA5 0x5A                 │
@@ -131,13 +130,12 @@ One packet = one snapshot of ALL sensors (brain + body + environment)
  │  TEMP (2B)      → Body temperature                                        │
  │  BATTERY (2B)   → Battery voltage remaining                               │
  │  SYNC (2B)      → External trigger signal                                 │
- │  PADDING (13B)  → Reserved for future use (currently all zeros)           │
+ │  COUNTER (1B)   → Packet counter (0-255)                                   │
  │  CHECKSUM (1B)  → Error detection: XOR of all previous bytes              │
  │  END (2B)       → "Packet complete" Two bytes: 0xC0 0xC0                  │
  └──────────────────────────────────────────────────────────────────────────────┘
 
  ✅ Has error checking (XOR checksum)
- ⚠ Wastes 13 bytes of padding every packet (= 13 KB/sec of nothing!)
  ⚠ Sends ALL sensor data every packet, even slow-changing ones like temperature
 ```
 
@@ -242,7 +240,7 @@ These three protocols transport fundamentally **different amounts and types of d
 | Protocol | EEG Bytes | Aux Bytes | Total Payload | Overhead | Overhead % |
 |----------|:---------:|:---------:|:-------------:|:--------:|:----------:|
 | OpenBCI Cyton | 24 | 6 | **30** | 3 (header+seq+footer) | 9% |
-| InEar Original | 15 | 30 (accel+PPG+temp+batt+sync) | **45** | 11 (hdr+chk+ftr+marker+padding) | 20% |
+| InEar Original | 15 | 30 (accel+PPG+temp+batt+sync) | **45** | 11 (hdr+chk+ftr+marker+counter) | 20% |
 | InEar Optimized (EEG-only) | 15 | 0 | **15** | 11 (hdr+type+seq+ts+chk+ftr) | 42% |
 | InEar Optimized (avg) | 15 | ~13.5 (weighted) | **~28.5** | ~11 | ~28% |
 
@@ -345,12 +343,9 @@ InEar Optimized (2 Mbaud):
  Accelerometer       ██████████████  6,000 B/s (10.7%)
  Temp + Battery      ████████  4,000 B/s (7.1%)
  Sync                ████  2,000 B/s (3.6%)
- Padding (wasted!)   ████████████████████████████  13,000 B/s (23.2%)  ← WASTE
  Overhead            ████████████  6,000 B/s (10.7%)
                      ─────────────────────────────
                      Total: 56,000 B/s
-
- PPG + Padding together = 31,000 B/s = 55% of all traffic!
 ```
 
 ### 5.5 Where The Bytes Go (InEar Optimized)
@@ -382,7 +377,7 @@ OpenBCI Cyton (250 Hz, steady and uniform):
  ──█───█───█───█───█───█───█───█───█───█───  (4 ms apart)
    33B  33B  33B  33B  33B  33B  33B  33B
 
-InEar Original (1000 Hz, steady but wasteful):
+InEar Original (1000 Hz, steady):
  ─█─█─█─█─█─█─█─█─█─█─█─█─█─█─█─█─█─█─█─  (1 ms apart)
   56 56 56 56 56 56 56 56 56 56 56 56 56 56  ← same size every time
 
@@ -445,8 +440,8 @@ because the accelerometer hasn't meaningfully changed in 4ms.
 | **Jitter Robustness** | Excellent: uniform packets | Good: variable sizes cause timing variation | ✅ Original (predictable) |
 | **Packet Loss Robustness** | Good: each packet self-contained | Moderate: losing accel/PPG packet means stale data longer | ✅ Original |
 | **Headroom for Growth** | 72% free bandwidth | 86% free bandwidth | ✅ Optimized (more room) |
-| **Memory Efficiency** | 13 bytes wasted per packet | Zero waste | ✅ Optimized |
-| **Future Extensibility** | 13 reserved bytes available | Must define new packet type | ✅ Original (easy to add fields) |
+| **Memory Efficiency** | All bytes used | Zero waste | = Tie |
+| **Future Extensibility** | Fixed format | Must define new packet type | = Tie |
 
 ---
 
@@ -461,7 +456,6 @@ Starting from the **original 56-byte fixed protocol**, here are all 28 identifie
 | **1A** ✅ | Multi-rate aux sampling | Send aux sensors only at their Nyquist rate |
 | **1B** | Delta encoding for EEG | Send differences instead of absolute values |
 | **1C** | Variable-width integers (VarInt) | Small values use fewer bytes |
-| **1D** ✅ | Eliminate reserved/padding bytes | Remove the 13 wasted bytes |
 | **1E** | PPG to 24-bit (from 48-bit) | PPG sensors are 18-20 bit; 24-bit is plenty |
 | **1F** | Smaller header | Reduce or compress header fields |
 | **1G** | Multi-sample batching | Pack N samples per packet, amortize overhead |
@@ -626,27 +620,6 @@ Example with EEG deltas:
 - 🟢 Average savings of ~30% when combined with delta encoding
 
 **Verdict**: High complexity for moderate savings. Better suited for file formats than real-time streams.
-
----
-
-#### 1D — Eliminate Reserved/Padding Bytes ✅ (Already Implemented)
-
-**What**: The original protocol has 13 reserved bytes in every packet, filled with zeros. The optimized protocol removes them entirely.
-
-```
-Original packet structure:
-  ... │ SYNC │ ░░░░░░░░░░░░░░░░░░░░░░░░░ │ CHK │ END │
-               ▲ 13 bytes of nothing ▲
-               These are always 0x00
-
-  13 bytes × 1000 packets/sec = 13,000 bytes/sec = 130,000 bits/sec WASTED
-
-Optimized: these 13 bytes simply don't exist.
-```
-
-**Trade-off**: In the original protocol, these bytes were intended for future expansion — adding new sensor fields without changing packet size. Removing them means any future sensors require defining a new packet type (which the optimized protocol already supports via its type system).
-
-**Impact**: Saves 13,000 B/s by itself — more than the entire accelerometer data stream.
 
 ---
 
@@ -1070,7 +1043,7 @@ Current (sequential, 5 channels):
   // 5 iterations, each with shifts, ORs, branch
 
 SIMD (parallel):
-  // Load all 15 EEG bytes + 1 padding into 128-bit register
+  // Load all 15 EEG bytes + 1 extra byte into 128-bit register
   // Shuffle bytes into 4×32-bit positions
   // Shift and sign-extend in parallel
   // Store 4 channels at once, then handle the 5th
@@ -1501,7 +1474,6 @@ Legend:
 | **1A** Multi-rate ✅ | ▼▼ 49% saved | ▼ smaller pkts | = same checksum | ▲▲ state machine | ▲ modulo logic | ▲▲ 14 pkt types | ▼ stale aux risk |
 | **1B** Delta encoding | ▼▼▼ 60% EEG saved | ▼ smaller pkts | ▼▼▼ error propagates | ▲▲ accumulator | ▲ delta math | ▲▲▲ keyframes | ▼▼▼ lost pkt corrupts stream |
 | **1C** VarInt | ▼▼ ~30% saved | ▼ smaller avg | ▼ no pre-validation | ▲▲▲ bit parsing | ▲ encoding | ▲▲▲ no fixed offsets | ▼▼ unpredictable size |
-| **1D** Remove padding ✅ | ▼ 13B saved | ▼ 13B less | = no change | ▼ less to checksum | ▼ less to fill | ▼ simpler pkt | ▼ less masking |
 | **1E** PPG 24-bit | ▼ 9B per PPG pkt | ▼ 9B less | = same coverage | ▼ reuse 24-bit parser | ▼ simpler pack | ▼ fewer widths | = no change |
 | **1F** Smaller header | ▼ 2-4B/pkt | ▼ slightly faster | ▼ less resync info | = trivial | ▼ fewer bytes | ▲ tighter packing | ▼ less recovery info |
 | **1G** Multi-sample batch | ▼▼ amortize overhead | ▲▲ N×1ms latency | ▲ lose N per bad pkt | ▲ unpack N | ▲ buffer N | ▲▲ batch edge cases | ▼▼ more loss per pkt |

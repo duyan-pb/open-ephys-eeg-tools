@@ -67,9 +67,9 @@ Supplementary sensor data sampled synchronously with EEG.
 | 0 | AccelX | Accelerometer X-axis | 16-bit signed | ±2g | mg |
 | 1 | AccelY | Accelerometer Y-axis | 16-bit signed | ±2g | mg |
 | 2 | AccelZ | Accelerometer Z-axis | 16-bit signed | ±2g | mg |
-| 3 | PPG_Red | PPG Red LED | 16-bit unsigned | 0-65535 | counts |
-| 4 | PPG_IR | PPG Infrared LED | 16-bit unsigned | 0-65535 | counts |
-| 5 | PPG_Green | PPG Green LED | 16-bit unsigned | 0-65535 | counts |
+| 3 | PPG_Red | PPG Red LED | 48-bit unsigned | 0-281474976710655 | counts |
+| 4 | PPG_IR | PPG Infrared LED | 48-bit unsigned | 0-281474976710655 | counts |
+| 5 | PPG_Green | PPG Green LED | 48-bit unsigned | 0-281474976710655 | counts |
 | 6 | Temp | Temperature sensor | 16-bit unsigned | 0-100 | °C × 100 |
 | 7 | Battery | Battery voltage | 16-bit unsigned | 0-5000 | mV |
 | 8 | Sync | Synchronization marker | 16-bit unsigned | 0-65535 | - |
@@ -84,7 +84,7 @@ Supplementary sensor data sampled synchronously with EEG.
 - **PPG (MAX30102 or similar)**
   - 3-wavelength optical sensor
   - Red: 660 nm, IR: 880 nm, Green: 530 nm
-  - 18-bit ADC, truncated to 16-bit
+  - 18-bit ADC, packed as 48-bit big-endian
   - Used for heart rate and SpO2
 
 - **Temperature**
@@ -111,11 +111,15 @@ Offset  Size  Field           Description
 ------  ----  --------------  ----------------------------------
 0       1     Header[0]       0xA5 (sync byte 1)
 1       1     Header[1]       0x5A (sync byte 2)
-2       4     Sample Count    32-bit little-endian packet counter
-6       15    EEG Data        5 channels × 3 bytes (24-bit BE each)
-21      18    Aux Data        9 channels × 2 bytes (16-bit BE each)
-39      1     Marker          Event marker byte
-40      13    Reserved        Future use (zeros)
+2       4     Timestamp       32-bit big-endian microsecond timestamp
+6       1     Marker          Event marker byte
+7       15    EEG Data        5 channels × 3 bytes (24-bit BE each)
+22      6     Accel Data      3 channels × 2 bytes (16-bit BE each)
+28      18    PPG Data        3 channels × 6 bytes (48-bit BE each)
+46      2     Temperature     16-bit signed BE (0.01°C units)
+48      2     Battery         16-bit unsigned BE (mV)
+50      2     Sync            16-bit unsigned BE
+52      1     Counter         Packet counter (0-255)
 53      1     Checksum        XOR of bytes 0-52
 54      1     Footer[0]       0xC0 (end byte 1)
 55      1     Footer[1]       0xC0 (end byte 2)
@@ -126,10 +130,10 @@ Total: 56 bytes
 ### 3.1 Visual Representation
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│ A5 5A │ CNT[4] │ EEG[15] │ AUX[18] │ MKR │ RSV[13] │ CHK │ C0 C0 │
-└────────────────────────────────────────────────────────────────────┘
-   2        4        15         18       1      13       1      2    = 56 bytes
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│ A5 5A │ TS[4] │ MKR │ EEG[15] │ ACC[6] │ PPG[18] │ TMP[2] │ BAT[2] │ SYN[2] │ CTR │ CHK │ C0 C0 │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+   2       4      1       15        6        18        2        2        2       1     1      2    = 56 bytes
 ```
 
 ---
@@ -140,9 +144,10 @@ Total: 56 bytes
 
 | Field | Byte Order | Reason |
 |-------|-----------|--------|
-| Sample Count | Little-endian | Native to ARM Cortex-M7 (Teensy 4.1) |
+| Timestamp | Big-endian | Consistent with sensor data |
 | EEG Data | Big-endian | Native to ADS1299 SPI output |
-| Aux Data | Big-endian | Consistent with EEG, network standard |
+| Accel Data | Big-endian | Consistent with EEG, network standard |
+| PPG Data | Big-endian | Consistent with EEG, network standard |
 
 ### 4.2 EEG Channel Encoding (24-bit signed, Big-Endian)
 
@@ -167,9 +172,9 @@ Signed:    16776704 - 16777216 = -512
 Voltage:   -512 × 0.02235 = -11.44 µV
 ```
 
-### 4.3 Aux Channel Encoding (16-bit, Big-Endian)
+### 4.3 Accelerometer Encoding (16-bit signed, Big-Endian)
 
-Each aux channel uses 2 bytes:
+Each accelerometer channel uses 2 bytes:
 
 ```
 Byte 0: MSB
@@ -178,11 +183,40 @@ Byte 1: LSB
 Value = (Byte0 << 8) | Byte1
 ```
 
-**Signed vs Unsigned:**
-- Accelerometer (channels 0-2): Signed (two's complement)
-- PPG, Temp, Battery, Sync (channels 3-8): Unsigned
+Signed (two's complement).
 
-### 4.4 Sample Count
+### 4.4 PPG Channel Encoding (48-bit unsigned, Big-Endian)
+
+Each PPG channel uses 6 bytes:
+
+```
+Byte 0: MSB (most significant)
+Byte 1: ...
+Byte 2: ...
+Byte 3: ...
+Byte 4: ...
+Byte 5: LSB (least significant)
+
+Value = (Byte0 << 40) | (Byte1 << 32) | (Byte2 << 24) | (Byte3 << 16) | (Byte4 << 8) | Byte5
+```
+
+Unsigned. The MAX30102 ADC is 18-bit, so upper bytes are typically zero.
+
+### 4.5 Temp/Battery/Sync Encoding (16-bit, Big-Endian)
+
+Each field uses 2 bytes:
+
+```
+Byte 0: MSB
+Byte 1: LSB
+
+Value = (Byte0 << 8) | Byte1
+```
+
+- Temperature: Signed (two's complement)
+- Battery, Sync: Unsigned
+
+### 4.6 Sample Count
 
 32-bit unsigned counter, little-endian, wraps at 2³² (4,294,967,296).
 
@@ -197,14 +231,18 @@ At 1000 Hz, wraps every ~49.7 days.
 | Component | Bytes | Justification |
 |-----------|-------|---------------|
 | Header | 2 | Reliable sync detection with unique pattern |
-| Sample Count | 4 | 32-bit allows long recordings without wrap issues |
-| EEG (5 × 3B) | 15 | Full 24-bit resolution from ADS1299 |
-| Aux (9 × 2B) | 18 | 16-bit sufficient for accelerometer/PPG |
+| Timestamp | 4 | 32-bit microsecond timestamp |
 | Marker | 1 | Event tagging for experiments |
-| Reserved | 13 | Future expansion (more channels, status) |
+| EEG (5 × 3B) | 15 | Full 24-bit resolution from ADS1299 |
+| Accel (3 × 2B) | 6 | 16-bit sufficient for accelerometer |
+| PPG (3 × 6B) | 18 | 48-bit packed from MAX30102 |
+| Temp | 2 | 16-bit temperature |
+| Battery | 2 | 16-bit battery voltage |
+| Sync | 2 | 16-bit sync marker |
+| Counter | 1 | Packet counter (0-255) |
 | Checksum | 1 | Error detection |
 | Footer | 2 | Frame boundary detection |
-| **Total** | **56** | Multiple of 8 for memory alignment |
+| **Total** | **56** | All bytes carry useful data |
 
 ### 5.2 Why 0xA5 0x5A Header?
 
@@ -353,36 +391,60 @@ const uint8_t FOOTER[] = {0xC0, 0xC0};
 const int PACKET_SIZE = 56;
 
 // Build packet
-void buildPacket(uint8_t* packet, uint32_t sampleCount, 
-                 int32_t* eeg, int16_t* aux, uint8_t marker) {
+void buildPacket(uint8_t* packet, uint32_t timestamp, 
+                 int32_t* eeg, int16_t* accel, int64_t* ppg,
+                 int16_t temp, uint16_t battery, uint16_t sync,
+                 uint8_t marker, uint8_t counter) {
     // Header
     packet[0] = 0xA5;
     packet[1] = 0x5A;
     
-    // Sample count (little-endian)
-    packet[2] = sampleCount & 0xFF;
-    packet[3] = (sampleCount >> 8) & 0xFF;
-    packet[4] = (sampleCount >> 16) & 0xFF;
-    packet[5] = (sampleCount >> 24) & 0xFF;
+    // Timestamp (big-endian)
+    packet[2] = (timestamp >> 24) & 0xFF;
+    packet[3] = (timestamp >> 16) & 0xFF;
+    packet[4] = (timestamp >> 8) & 0xFF;
+    packet[5] = timestamp & 0xFF;
+    
+    // Marker
+    packet[6] = marker;
     
     // EEG data (big-endian, 24-bit)
     for (int i = 0; i < 5; i++) {
-        packet[6 + i*3 + 0] = (eeg[i] >> 16) & 0xFF;
-        packet[6 + i*3 + 1] = (eeg[i] >> 8) & 0xFF;
-        packet[6 + i*3 + 2] = eeg[i] & 0xFF;
+        packet[7 + i*3 + 0] = (eeg[i] >> 16) & 0xFF;
+        packet[7 + i*3 + 1] = (eeg[i] >> 8) & 0xFF;
+        packet[7 + i*3 + 2] = eeg[i] & 0xFF;
     }
     
-    // Aux data (big-endian, 16-bit)
-    for (int i = 0; i < 9; i++) {
-        packet[21 + i*2 + 0] = (aux[i] >> 8) & 0xFF;
-        packet[21 + i*2 + 1] = aux[i] & 0xFF;
+    // Accelerometer (big-endian, 16-bit)
+    for (int i = 0; i < 3; i++) {
+        packet[22 + i*2 + 0] = (accel[i] >> 8) & 0xFF;
+        packet[22 + i*2 + 1] = accel[i] & 0xFF;
     }
     
-    // Marker
-    packet[39] = marker;
+    // PPG data (big-endian, 48-bit)
+    for (int i = 0; i < 3; i++) {
+        packet[28 + i*6 + 0] = (ppg[i] >> 40) & 0xFF;
+        packet[28 + i*6 + 1] = (ppg[i] >> 32) & 0xFF;
+        packet[28 + i*6 + 2] = (ppg[i] >> 24) & 0xFF;
+        packet[28 + i*6 + 3] = (ppg[i] >> 16) & 0xFF;
+        packet[28 + i*6 + 4] = (ppg[i] >> 8) & 0xFF;
+        packet[28 + i*6 + 5] = ppg[i] & 0xFF;
+    }
     
-    // Reserved (zeros)
-    memset(&packet[40], 0, 13);
+    // Temperature (big-endian, 16-bit)
+    packet[46] = (temp >> 8) & 0xFF;
+    packet[47] = temp & 0xFF;
+    
+    // Battery (big-endian, 16-bit)
+    packet[48] = (battery >> 8) & 0xFF;
+    packet[49] = battery & 0xFF;
+    
+    // Sync (big-endian, 16-bit)
+    packet[50] = (sync >> 8) & 0xFF;
+    packet[51] = sync & 0xFF;
+    
+    // Counter
+    packet[52] = counter;
     
     // Checksum
     uint8_t checksum = 0;
@@ -411,25 +473,45 @@ bool parsePacket(const uint8_t* data, Sample& sample) {
     for (int i = 0; i < 53; i++) checksum ^= data[i];
     if (checksum != data[53]) return false;
     
-    // Parse sample count (little-endian)
-    sample.count = data[2] | (data[3] << 8) | 
-                   (data[4] << 16) | (data[5] << 24);
+    // Parse timestamp (big-endian)
+    sample.timestamp = (data[2] << 24) | (data[3] << 16) | 
+                       (data[4] << 8) | data[5];
+    
+    // Parse marker
+    sample.marker = data[6];
     
     // Parse EEG (big-endian, 24-bit signed)
     for (int i = 0; i < 5; i++) {
-        int32_t raw = (data[6 + i*3] << 16) | 
-                      (data[7 + i*3] << 8) | 
-                      data[8 + i*3];
+        int32_t raw = (data[7 + i*3] << 16) | 
+                      (data[8 + i*3] << 8) | 
+                      data[9 + i*3];
         if (raw & 0x800000) raw |= 0xFF000000; // Sign extend
         sample.eeg[i] = raw * 0.02235f; // Convert to µV
     }
     
-    // Parse Aux (big-endian, 16-bit)
-    for (int i = 0; i < 9; i++) {
-        sample.aux[i] = (data[21 + i*2] << 8) | data[22 + i*2];
+    // Parse Accelerometer (big-endian, 16-bit signed)
+    for (int i = 0; i < 3; i++) {
+        sample.accel[i] = (int16_t)((data[22 + i*2] << 8) | data[23 + i*2]);
     }
     
-    sample.marker = data[39];
+    // Parse PPG (big-endian, 48-bit unsigned)
+    for (int i = 0; i < 3; i++) {
+        sample.ppg[i] = ((int64_t)data[28 + i*6] << 40) |
+                        ((int64_t)data[29 + i*6] << 32) |
+                        ((int64_t)data[30 + i*6] << 24) |
+                        ((int64_t)data[31 + i*6] << 16) |
+                        ((int64_t)data[32 + i*6] << 8) |
+                        data[33 + i*6];
+    }
+    
+    // Parse Temp, Battery, Sync (big-endian, 16-bit)
+    sample.temp = (int16_t)((data[46] << 8) | data[47]);
+    sample.battery = (data[48] << 8) | data[49];
+    sample.sync = (data[50] << 8) | data[51];
+    
+    // Parse counter
+    sample.counter = data[52];
+    
     return true;
 }
 ```
@@ -461,27 +543,57 @@ def parse_packet(data: bytes) -> dict:
     if checksum != data[53]:
         raise ValueError(f"Checksum mismatch: {checksum} != {data[53]}")
     
-    # Parse fields
-    sample_count = struct.unpack('<I', data[2:6])[0]
+    # Parse timestamp (big-endian)
+    timestamp = struct.unpack('>I', data[2:6])[0]
     
+    # Marker
+    marker = data[6]
+    
+    # Parse EEG (big-endian, 24-bit signed)
     eeg = []
     for i in range(5):
-        offset = 6 + i * 3
+        offset = 7 + i * 3
         raw = (data[offset] << 16) | (data[offset+1] << 8) | data[offset+2]
         if raw & 0x800000:
             raw -= 0x1000000
         eeg.append(raw * 0.02235)  # µV
     
-    aux = []
-    for i in range(9):
-        offset = 21 + i * 2
-        aux.append((data[offset] << 8) | data[offset+1])
+    # Parse accelerometer (big-endian, 16-bit signed)
+    accel = []
+    for i in range(3):
+        offset = 22 + i * 2
+        val = (data[offset] << 8) | data[offset+1]
+        if val & 0x8000:
+            val -= 0x10000
+        accel.append(val)
+    
+    # Parse PPG (big-endian, 48-bit unsigned)
+    ppg = []
+    for i in range(3):
+        offset = 28 + i * 6
+        val = (data[offset] << 40) | (data[offset+1] << 32) | \
+              (data[offset+2] << 24) | (data[offset+3] << 16) | \
+              (data[offset+4] << 8) | data[offset+5]
+        ppg.append(val)
+    
+    # Parse temp, battery, sync (big-endian, 16-bit)
+    temp = struct.unpack('>h', data[46:48])[0]
+    battery = struct.unpack('>H', data[48:50])[0]
+    sync = struct.unpack('>H', data[50:52])[0]
+    
+    # Counter
+    counter = data[52]
     
     return {
-        'sample_count': sample_count,
+        'timestamp': timestamp,
+        'marker': marker,
         'eeg': eeg,
-        'aux': aux,
-        'marker': data[39]
+        'accel': accel,
+        'ppg': ppg,
+        'temp': temp,
+        'battery': battery,
+        'sync': sync,
+        'counter': counter
     }
 ```
 
@@ -501,8 +613,8 @@ namespace InEarTeensy {
     
     // Channel counts
     constexpr int      NUM_EEG_CHANNELS = 5;
-    constexpr int      NUM_AUX_CHANNELS = 9;
-    constexpr int      TOTAL_CHANNELS   = 14;
+    constexpr int      NUM_ACCEL_CHANNELS = 3;
+    constexpr int      NUM_PPG_CHANNELS = 3;
     
     // Timing
     constexpr int      SAMPLE_RATE      = 1000;  // Hz
@@ -510,11 +622,15 @@ namespace InEarTeensy {
     
     // Byte offsets
     constexpr int      OFFSET_HEADER    = 0;
-    constexpr int      OFFSET_COUNT     = 2;
-    constexpr int      OFFSET_EEG       = 6;
-    constexpr int      OFFSET_AUX       = 21;
-    constexpr int      OFFSET_MARKER    = 39;
-    constexpr int      OFFSET_RESERVED  = 40;
+    constexpr int      OFFSET_TIMESTAMP = 2;
+    constexpr int      OFFSET_MARKER    = 6;
+    constexpr int      OFFSET_EEG       = 7;
+    constexpr int      OFFSET_ACCEL     = 22;
+    constexpr int      OFFSET_PPG       = 28;
+    constexpr int      OFFSET_TEMP      = 46;
+    constexpr int      OFFSET_BATTERY   = 48;
+    constexpr int      OFFSET_SYNC      = 50;
+    constexpr int      OFFSET_COUNTER   = 52;
     constexpr int      OFFSET_CHECKSUM  = 53;
     constexpr int      OFFSET_FOOTER    = 54;
     
