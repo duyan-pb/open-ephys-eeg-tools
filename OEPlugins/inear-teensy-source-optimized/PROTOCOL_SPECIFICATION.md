@@ -28,7 +28,7 @@ The Optimized Protocol is a variable-length binary streaming protocol designed f
 | **Packet Size** | 26-55 bytes (variable) |
 | **Baud Rate** | 2,000,000 (2 Mbaud) |
 | **Avg Bandwidth** | ~28.5 KB/s (measured) |
-| **Original Bandwidth** | 54.7 KB/s |
+| **Original Bandwidth** | 56.0 KB/s (56 bytes × 1000 Hz) |
 | **Savings** | ~49% |
 | **Latency** | < 1 ms (single packet) |
 
@@ -45,7 +45,7 @@ The Optimized Protocol is a variable-length binary streaming protocol designed f
 | Packet Type Field | None | Enumerated byte |
 | Sequence Number | Counter at end | In header |
 | Timestamp | 4 bytes | 4 bytes (microseconds) |
-| Average Bandwidth | 54,700 bytes/sec | ~28,500 bytes/sec |
+| Average Bandwidth | 56,000 bytes/sec | ~28,500 bytes/sec |
 | Bandwidth Savings | - | ~49% |
 
 ### Why Variable Length?
@@ -302,12 +302,13 @@ uint8_t getPacketType(uint32_t sampleNum, bool hasMarker)
 | Original (fixed 56B) | 1000 | 56,000 | 100% (baseline) |
 | Optimized (variable) | 1000 | ~33,000 | 59% (~41% savings) |
 
-### 7.2 USB Throughput
+### 7.2 Serial Throughput
 
-At 2 Mbaud (2,000,000 bits/sec):
-- Maximum: 200,000 bytes/sec
-- Optimized usage: 33,000 bytes/sec (16.5%)
-- Original usage: 56,000 bytes/sec (28%)
+At 2 Mbaud (2,000,000 bits/sec) with 8-N-1 encoding:
+- Serial overhead: 10 bits per byte (1 start + 8 data + 1 stop)
+- Maximum throughput: 2,000,000 / 10 = 200,000 bytes/sec
+- Optimized usage: ~28,500 bytes/sec (14.3%)
+- Original usage: 56,000 bytes/sec (28.0%)
 
 Both protocols have significant headroom for reliability.
 

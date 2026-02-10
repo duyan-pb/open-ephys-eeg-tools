@@ -442,13 +442,18 @@ else {
 ```
 Packet size:        33 bytes
 Sample rate:        250 Hz
-Data rate:          8,250 bytes/sec = 66,000 bits/sec
+Data rate:          8,250 bytes/sec
+
+Serial (8-N-1):     10 bits per byte (1 start + 8 data + 1 stop)
+Wire bit rate:      8,250 × 10 = 82,500 bits/sec
 
 Serial bandwidth:   115,200 baud
-Utilization:        66,000 / 115,200 = 57.3%
+Max throughput:     115,200 / 10 = 11,520 bytes/sec
+Utilization:        8,250 / 11,520 = 71.6%
 
 With 921600 baud:
-Utilization:        66,000 / 921,600 = 7.2%
+Max throughput:     921,600 / 10 = 92,160 bytes/sec
+Utilization:        8,250 / 92,160 = 9.0%
 ```
 
 ### 9.2 Radio Constraints

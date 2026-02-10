@@ -16,46 +16,47 @@ OpenBCICytonEditor::OpenBCICytonEditor(GenericProcessor* parentNode, OpenBCICyto
     
     // Port selector label
     portLabel = std::make_unique<Label>("PortLabel", "Port:");
-    portLabel->setBounds(10, 25, 40, 20);
+    portLabel->setBounds(10, 28, 35, 20);
     portLabel->setFont(Font(12.0f));
     portLabel->setColour(Label::textColourId, Colours::darkgrey);
     addAndMakeVisible(portLabel.get());
     
     // Port selector combo box
     portSelector = std::make_unique<ComboBox>("PortSelector");
-    portSelector->setBounds(50, 25, 120, 20);
+    portSelector->setBounds(45, 28, 100, 20);
     portSelector->addListener(this);
     addAndMakeVisible(portSelector.get());
     
     // Refresh button
-    refreshButton = std::make_unique<TextButton>("Refresh");
-    refreshButton->setBounds(175, 25, 50, 20);
+    refreshButton = std::make_unique<TextButton>("↻");
+    refreshButton->setBounds(148, 28, 25, 20);
     refreshButton->addListener(this);
     addAndMakeVisible(refreshButton.get());
     
+    // Daisy mode toggle (8ch default, 16ch with Daisy)
+    daisyToggle = std::make_unique<ToggleButton>("Daisy");
+    daisyToggle->setBounds(178, 28, 60, 20);
+    daisyToggle->setToggleState(false, dontSendNotification);
+    daisyToggle->addListener(this);
+    daisyToggle->setTooltip("Enable 16-channel Daisy mode");
+    addAndMakeVisible(daisyToggle.get());
+    
     // Connect button
     connectButton = std::make_unique<TextButton>("Connect");
-    connectButton->setBounds(230, 25, 45, 20);
+    connectButton->setBounds(10, 55, 80, 25);
     connectButton->addListener(this);
     addAndMakeVisible(connectButton.get());
     
-    // Daisy mode toggle
-    daisyToggle = std::make_unique<ToggleButton>("16-ch (Daisy)");
-    daisyToggle->setBounds(10, 50, 120, 20);
-    daisyToggle->setToggleState(false, dontSendNotification);
-    daisyToggle->addListener(this);
-    addAndMakeVisible(daisyToggle.get());
-    
     // Status label
     statusLabel = std::make_unique<Label>("StatusLabel", "Not connected");
-    statusLabel->setBounds(10, 75, 130, 20);
+    statusLabel->setBounds(95, 55, 100, 25);
     statusLabel->setFont(Font(11.0f));
     statusLabel->setColour(Label::textColourId, Colours::darkgrey);
     addAndMakeVisible(statusLabel.get());
     
     // Firmware label
     firmwareLabel = std::make_unique<Label>("FirmwareLabel", "");
-    firmwareLabel->setBounds(140, 75, 135, 20);
+    firmwareLabel->setBounds(195, 55, 80, 25);
     firmwareLabel->setFont(Font(11.0f));
     firmwareLabel->setColour(Label::textColourId, Colours::darkgrey);
     addAndMakeVisible(firmwareLabel.get());

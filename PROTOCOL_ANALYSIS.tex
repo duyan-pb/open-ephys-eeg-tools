@@ -1,0 +1,1755 @@
+% =============================================================================
+% Protocol Analysis & Optimization Report
+% InEar Teensy EEG Streaming Protocols
+% February 2026
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{tikz}
+\usepackage{bytefield}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{pifont}
+
+% --- Colors ---
+\definecolor{headerblue}{HTML}{2C3E50}
+\definecolor{codegreen}{HTML}{27AE60}
+\definecolor{codegray}{HTML}{7F8C8D}
+\definecolor{codepurple}{HTML}{8E44AD}
+\definecolor{codeblue}{HTML}{2980B9}
+\definecolor{backgray}{HTML}{F7F7F7}
+\definecolor{warnred}{HTML}{E74C3C}
+\definecolor{okgreen}{HTML}{27AE60}
+\definecolor{warnyellow}{HTML}{F39C12}
+\definecolor{lightblue}{HTML}{EBF5FB}
+\definecolor{lightgreen}{HTML}{EAFAF1}
+\definecolor{lightred}{HTML}{FDEDEC}
+\definecolor{lightyellow}{HTML}{FEF9E7}
+
+% --- Listings setup ---
+\lstdefinestyle{code}{
+    backgroundcolor=\color{backgray},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{codegray},
+    numbers=none,
+    tabsize=4,
+    showstringspaces=false,
+    commentstyle=\color{codegray}\itshape,
+    keywordstyle=\color{codeblue}\bfseries,
+    stringstyle=\color{codegreen},
+}
+
+\lstdefinestyle{cpp}{
+    style=code,
+    language=C++,
+    morekeywords={uint8_t, uint16_t, uint32_t, int32_t, int64_t, size_t, uint8__t},
+}
+
+\lstdefinestyle{diagram}{
+    backgroundcolor=\color{backgray},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=false,
+    frame=single,
+    rulecolor=\color{codegray},
+    numbers=none,
+    tabsize=2,
+    showstringspaces=false,
+    literate={█}{{\textblock}}1
+             {░}{{\textcolor{codegray}{\textblock}}}1
+             {▼}{{\textcolor{okgreen}{$\blacktriangledown$}}}1
+             {▲}{{\textcolor{warnred}{$\blacktriangle$}}}1
+             {✅}{{\textcolor{okgreen}{\ding{51}}}}1
+             {❌}{{\textcolor{warnred}{\ding{55}}}}1
+             {⚠}{{\textcolor{warnyellow}{$\triangle$!}}}1,
+}
+
+\lstset{style=code}
+
+% --- tcolorbox environments ---
+\newtcolorbox{infobox}[1][]{
+    colback=lightblue,
+    colframe=codeblue,
+    fonttitle=\bfseries,
+    title=#1,
+    boxrule=0.5pt,
+    arc=2pt,
+}
+
+\newtcolorbox{warnbox}[1][]{
+    colback=lightyellow,
+    colframe=warnyellow,
+    fonttitle=\bfseries,
+    title=#1,
+    boxrule=0.5pt,
+    arc=2pt,
+}
+
+\newtcolorbox{successbox}[1][]{
+    colback=lightgreen,
+    colframe=okgreen,
+    fonttitle=\bfseries,
+    title=#1,
+    boxrule=0.5pt,
+    arc=2pt,
+}
+
+\newtcolorbox{dangerbox}[1][]{
+    colback=lightred,
+    colframe=warnred,
+    fonttitle=\bfseries,
+    title=#1,
+    boxrule=0.5pt,
+    arc=2pt,
+}
+
+% --- Custom commands ---
+\newcommand{\tactic}[1]{\textbf{#1}}
+\newcommand{\proto}[1]{\textsc{#1}}
+\newcommand{\hexval}[1]{\texttt{0x#1}}
+\newcommand{\freewin}{\textcolor{okgreen}{\ding{51}\,Free Win}}
+\newcommand{\implemented}{\textcolor{codeblue}{\ding{51}\,Implemented}}
+\newcommand{\metricdown}{\textcolor{okgreen}{$\blacktriangledown$}}
+\newcommand{\metricup}{\textcolor{warnred}{$\blacktriangle$}}
+\newcommand{\metriceq}{\textcolor{codegray}{$=$}}
+
+% --- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Protocol Analysis \& Optimization Report}
+\fancyhead[R]{\small February 2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Section formatting ---
+\titleformat{\section}
+    {\Large\bfseries\color{headerblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+    {\large\bfseries\color{headerblue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{headerblue}}{\thesubsubsection}{1em}{}
+
+% --- Hyperref setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=codeblue,
+    urlcolor=codeblue,
+    citecolor=codeblue,
+    pdftitle={Protocol Analysis \& Optimization Report},
+    pdfauthor={InEar Teensy EEG Project},
+    pdfsubject={EEG Streaming Protocol Analysis},
+}
+
+% --- Compact lists ---
+\setlist{nosep, leftmargin=1.5em}
+
+% --- Table column types ---
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% =============================================================================
+\begin{document}
+
+% --- Title Page ---
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\Huge\bfseries\color{headerblue} Protocol Analysis \&\\[0.3em] Optimization Report\par}
+\vspace{1.5cm}
+{\Large InEar Teensy EEG Streaming Protocols\\[0.5em]
+Findings, Comparisons \& Optimization Tactics\par}
+\vspace{2cm}
+{\large February 2026\par}
+\vspace{3cm}
+\begin{tcolorbox}[colback=lightblue, colframe=codeblue, width=0.8\textwidth, arc=3pt]
+\centering
+\textbf{Key Finding:} The optimized protocol saves ${\sim}49\%$ bandwidth by only sending auxiliary sensor data when it actually changes, while maintaining identical EEG quality.
+\end{tcolorbox}
+\vfill
+{\small Generated from analysis of the \texttt{open-ephys-eeg-tools} repository\\
+OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
+\end{titlepage}
+
+% --- Table of Contents ---
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Executive Summary}
+\label{sec:executive-summary}
+
+This document analyzes three EEG streaming protocols used in the Open Ephys ecosystem.
+
+\begin{table}[H]
+\centering
+\caption{Protocol overview comparison}
+\label{tab:executive-summary}
+\small
+\begin{tabularx}{\textwidth}{l C{3.2cm} C{3.2cm} C{3.2cm}}
+\toprule
+& \textbf{OpenBCI Cyton} & \textbf{InEar Original} & \textbf{InEar Optimized} \\
+\midrule
+\textbf{Purpose} & General-purpose 8ch EEG & In-ear 5ch EEG + biometrics & Same hardware, smarter protocol \\
+\textbf{Packet Size} & 33\,B (fixed) & 56\,B (fixed) & 26--55\,B (variable) \\
+\textbf{Sample Rate} & 250\,Hz & 1000\,Hz & 1000\,Hz \\
+\textbf{Baud Rate} & 115,200 & 2,000,000 & 2,000,000 \\
+\textbf{Data Rate} & 8,250\,B/s & 56,000\,B/s & ${\sim}$28,500\,B/s \\
+\textbf{Bandwidth Used} & 71.6\% & 28.0\% & 14.3\% \\
+\textbf{Error Detection} & None (relies on USB) & XOR checksum & XOR checksum \\
+\textbf{Sensors} & 8 EEG + accel & \makecell{5 EEG + accel + PPG\\+ temp + batt + sync} & \makecell{Same sensors,\\sent at native rates} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =============================================================================
+\section{The Three Protocols}
+\label{sec:three-protocols}
+
+\subsection{OpenBCI Cyton}
+
+A wireless EEG streaming protocol using RFDuino radio modules. The Cyton board transmits to a USB dongle over 2.4\,GHz radio, which presents as a virtual serial port.
+
+\begin{itemize}
+    \item \textbf{8 EEG channels} at 24-bit resolution (ADS1299)
+    \item \textbf{3-axis accelerometer} (LIS3DH)
+    \item \textbf{250\,Hz} sample rate (limited by radio bandwidth)
+    \item \textbf{Wireless} link (2.4\,GHz Nordic Gazelle protocol)
+    \item \textbf{No checksum} --- relies on USB's built-in error detection
+    \item Max radio payload is 31 bytes; dongle adds 2 framing bytes $\rightarrow$ 33 bytes
+\end{itemize}
+
+\subsection{InEar Teensy Original}
+
+A wired USB protocol for a Teensy~4.1 microcontroller with ADS1299 EEG front-end plus multiple biometric sensors. Designed for in-ear EEG devices.
+
+\begin{itemize}
+    \item \textbf{5 EEG channels} at 24-bit resolution
+    \item \textbf{9 auxiliary channels}: accelerometer (3), PPG heart sensor (3), temperature, battery, sync
+    \item \textbf{1000\,Hz} sample rate
+    \item \textbf{Fixed 56-byte packets} --- every packet carries ALL sensor data
+    \item \textbf{13 bytes of padding} reserved for future use (wasted bandwidth)
+    \item XOR checksum for error detection
+\end{itemize}
+
+\subsection{InEar Teensy Optimized}
+
+Same hardware as the original, but with a redesigned protocol that sends sensor data only at each sensor's native rate:
+
+\begin{itemize}
+    \item \textbf{Variable-length packets} (26--55 bytes) based on content
+    \item \textbf{Multi-rate sampling}: EEG at 1000\,Hz, accelerometer at 250\,Hz, PPG at 100\,Hz, temperature/battery at 10\,Hz
+    \item \textbf{Enumerated packet types} tell the receiver exactly what data is included
+    \item \textbf{Sample-and-hold} on the receiver: when slow sensors aren't sent, the receiver uses the last known value
+    \item Same error detection (XOR checksum)
+\end{itemize}
+
+% =============================================================================
+\section{Packet Structure Visualizations}
+\label{sec:packet-structures}
+
+\subsection{OpenBCI Cyton --- 33 Bytes}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=0.95em, bitheight=2.5em]{33}
+    \bitheader{0,1,2,4,7,10,13,16,19,22,25,26,32} \\
+    \bitbox{1}{\tiny\texttt{0xA0}\\START} &
+    \bitbox{1}{\tiny SEQ} &
+    \bitbox{3}{\tiny Ch1} &
+    \bitbox{3}{\tiny Ch2} &
+    \bitbox{3}{\tiny Ch3} &
+    \bitbox{3}{\tiny Ch4} &
+    \bitbox{3}{\tiny Ch5} &
+    \bitbox{3}{\tiny Ch6} &
+    \bitbox{3}{\tiny Ch7} &
+    \bitbox{3}{\tiny Ch8} &
+    \bitbox{6}{\tiny AUX (accel)} &
+    \bitbox{1}{\tiny\texttt{0xCn}\\END}
+\end{bytefield}
+\caption{OpenBCI Cyton packet structure (33 bytes)}
+\label{fig:openbci-packet}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{START} (1\,B): Sync marker, always \hexval{A0}
+    \item \textbf{SEQ} (1\,B): Packet counter (0--255), detects lost packets
+    \item \textbf{EEG} (24\,B): 8 brain signal readings, 24-bit signed big-endian each
+    \item \textbf{AUX} (6\,B): Accelerometer X, Y, Z (or timestamps)
+    \item \textbf{END} (1\,B): Stop byte (\hexval{C0}--\hexval{C6}), also encodes packet type
+\end{itemize}
+
+\begin{warnbox}[Note]
+No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ slower baud rate, fewer channels possible.
+\end{warnbox}
+
+\subsection{InEar Teensy Original --- 56 Bytes}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=0.65em, bitheight=2.5em]{56}
+    \bitheader{0,2,6,7,22,28,46,48,50,52,53,54} \\
+    \bitbox{2}{\tiny START\\A5\,5A} &
+    \bitbox{4}{\tiny TIMESTAMP} &
+    \bitbox{1}{\tiny M} &
+    \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
+    \bitbox{6}{\tiny ACCEL} &
+    \bitbox{18}{\tiny PPG (3ch $\times$ 6\,B)} &
+    \bitbox{2}{\tiny T} &
+    \bitbox{2}{\tiny B} &
+    \bitbox{2}{\tiny S} &
+    \bitbox{1}{\tiny C} &
+    \bitbox{1}{\tiny CHK} &
+    \bitbox{2}{\tiny END\\C0\,C0}
+\end{bytefield}
+\caption{InEar Original packet structure (56 bytes). M=Marker, T=Temp, B=Battery, S=Sync, C=Counter. 13 bytes of padding between Sync and Counter are omitted from diagram.}
+\label{fig:inear-original-packet}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llp{8cm}}
+\toprule
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\midrule
+START & 2\,B & Sync marker: \hexval{A5}\,\hexval{5A} \\
+TIMESTAMP & 4\,B & Sample time in microseconds \\
+MARKER & 1\,B & Experiment event tag \\
+EEG & 15\,B & 5 channels, 24-bit signed big-endian \\
+ACCEL & 6\,B & 3-axis accelerometer (X, Y, Z) \\
+PPG & 18\,B & 3 channels $\times$ 48-bit (Red, IR, Green) \\
+TEMP & 2\,B & Body temperature \\
+BATTERY & 2\,B & Battery voltage \\
+SYNC & 2\,B & External trigger signal \\
+PADDING & 13\,B & Reserved (all zeros --- \textbf{wasted!}) \\
+CHECKSUM & 1\,B & XOR of all preceding bytes \\
+END & 2\,B & Footer: \hexval{C0}\,\hexval{C0} \\
+\bottomrule
+\end{tabular}
+\caption{InEar Original field descriptions}
+\end{table}
+
+\begin{dangerbox}[Waste]
+13 bytes of padding per packet $\times$ 1000\,packets/sec = \textbf{13,000\,B/s of nothing}. Sends ALL sensor data every packet, even slow-changing values like temperature.
+\end{dangerbox}
+
+\subsection{InEar Teensy Optimized --- 26 to 55 Bytes}
+
+The key idea: \textit{don't send data that hasn't changed!}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Signal} & \textbf{Rate} & \textbf{Send interval} & \textbf{Justification} \\
+\midrule
+Brain (EEG) & 1000\,Hz & Every packet & Fast-changing neural signals \\
+Motion (Accel) & 250\,Hz & Every 4th packet & Medium-speed head movement \\
+Heart pulse (PPG) & 100\,Hz & Every 10th packet & Slow cardiac rhythm \\
+Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
+\bottomrule
+\end{tabular}
+\caption{Multi-rate sensor scheduling in the optimized protocol}
+\end{table}
+
+\subsubsection*{Most Common Packet --- EEG Only (26 bytes)}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=1.3em, bitheight=2.5em]{26}
+    \bitheader{0,2,3,4,8,23,24,25} \\
+    \bitbox{2}{\tiny START\\A5\,5A} &
+    \bitbox{1}{\tiny TYPE\\\hexval{00}} &
+    \bitbox{1}{\tiny SEQ} &
+    \bitbox{4}{\tiny TIMESTAMP} &
+    \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
+    \bitbox{1}{\tiny CHK} &
+    \bitbox{2}{\tiny END\\C0\,C0}
+\end{bytefield}
+\caption{EEG-only packet (Type \hexval{00}) --- 749 per second}
+\end{figure}
+
+\subsubsection*{Every 4th Packet --- EEG + Accel (32 bytes)}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=1.1em, bitheight=2.5em]{32}
+    \bitheader{0,2,3,4,8,23,29,30,31} \\
+    \bitbox{2}{\tiny START} &
+    \bitbox{1}{\tiny TYPE\\\hexval{01}} &
+    \bitbox{1}{\tiny SEQ} &
+    \bitbox{4}{\tiny TS} &
+    \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
+    \bitbox{6}{\tiny ACCEL\\X,Y,Z} &
+    \bitbox{1}{\tiny CHK} &
+    \bitbox{2}{\tiny END}
+\end{bytefield}
+\caption{EEG + Accelerometer packet (Type \hexval{01}) --- 200 per second}
+\end{figure}
+
+\subsubsection*{Full Sync Packet --- Everything (54 bytes)}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=0.67em, bitheight=2.5em]{54}
+    \bitheader{0,2,3,4,8,23,29,47,49,51,52,53} \\
+    \bitbox{2}{\tiny ST} &
+    \bitbox{1}{\tiny T\\\hexval{06}} &
+    \bitbox{1}{\tiny S} &
+    \bitbox{4}{\tiny TS} &
+    \bitbox{15}{\tiny EEG (5ch $\times$ 3\,B)} &
+    \bitbox{6}{\tiny ACCEL} &
+    \bitbox{18}{\tiny PPG (3ch $\times$ 6\,B)} &
+    \bitbox{2}{\tiny TMP} &
+    \bitbox{2}{\tiny BAT} &
+    \bitbox{1}{\tiny CK} &
+    \bitbox{2}{\tiny END}
+\end{bytefield}
+\caption{Full sync packet (Type \hexval{06}) --- 1 per second}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{clrr}
+\toprule
+\textbf{Type} & \textbf{Contents} & \textbf{Size} & \textbf{Per second} \\
+\midrule
+\hexval{00} & EEG only & 26\,B & 749 \\
+\hexval{01} & EEG + Accel & 32\,B & 200 \\
+\hexval{02} & EEG + PPG & 44\,B & 40 \\
+\hexval{03} & EEG + Accel + PPG & 50\,B & 9 \\
+\hexval{04} & EEG + Health & 30\,B & 1 \\
+\hexval{05} & EEG + Accel + Health & 36\,B & ${\sim}$0 \\
+\hexval{06} & Everything & 54\,B & 1 \\
+\midrule
+\multicolumn{4}{l}{\small Add \hexval{10} to any type $\rightarrow$ also includes experiment marker} \\
+\bottomrule
+\end{tabular}
+\caption{Optimized protocol packet type reference}
+\label{tab:packet-types}
+\end{table}
+
+% =============================================================================
+\section{Data Content Comparison}
+\label{sec:data-content}
+
+These three protocols transport fundamentally \textbf{different amounts and types of data}. A direct bandwidth comparison without accounting for this is misleading.
+
+\subsection{What Each Protocol Actually Carries}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Data Type} & \textbf{OpenBCI Cyton} & \textbf{InEar Original} & \textbf{InEar Optimized} \\
+\midrule
+EEG Channels & 8 & 5 & 5 \\
+EEG Resolution & 24-bit & 24-bit & 24-bit \\
+EEG Bytes/Sample & 24 & 15 & 15 \\
+Accelerometer & 3-axis, 16-bit & 3-axis, 16-bit & 3-axis, 16-bit \\
+PPG (Heart) & \textcolor{warnred}{\ding{55}} None & 3ch $\times$ 48-bit (18\,B!) & 3ch $\times$ 48-bit \\
+Temperature & \textcolor{warnred}{\ding{55}} None & 16-bit & 16-bit \\
+Battery & \textcolor{warnred}{\ding{55}} None & 16-bit & 16-bit \\
+Sync/Trigger & \textcolor{warnred}{\ding{55}} None & 16-bit & \textcolor{warnred}{\ding{55}} Removed \\
+Marker & Via footer byte & 1 byte & 1 byte (optional) \\
+Timestamp & Via aux (optional) & 4 bytes & 4 bytes \\
+\bottomrule
+\end{tabular}
+\caption{Sensor data carried by each protocol}
+\end{table}
+
+\subsection{Useful Payload Per Sample}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{l R{1.2cm} R{1.2cm} R{1.5cm} R{1.5cm} R{1.5cm}}
+\toprule
+\textbf{Protocol} & \textbf{EEG} & \textbf{Aux} & \textbf{Payload} & \textbf{Overhead} & \textbf{Ovh.\,\%} \\
+\midrule
+OpenBCI Cyton & 24\,B & 6\,B & \textbf{30\,B} & 3\,B & 9\% \\
+InEar Original & 15\,B & 30\,B & \textbf{45\,B} & 11\,B & 20\% \\
+InEar Opt.\ (EEG-only) & 15\,B & 0\,B & \textbf{15\,B} & 11\,B & 42\% \\
+InEar Opt.\ (avg) & 15\,B & ${\sim}$13.5\,B & $\mathbf{{\sim}28.5}$\,\textbf{B} & ${\sim}$11\,B & ${\sim}$28\% \\
+\bottomrule
+\end{tabular}
+\caption{Payload vs.\ overhead per sample}
+\end{table}
+
+\subsection{The PPG Problem}
+
+PPG (photoplethysmography / heart pulse) data is the single biggest auxiliary payload:
+
+\[
+\text{PPG} = 3 \text{ channels} \times 6 \text{ bytes} = 18 \text{ bytes per sample}
+\]
+
+That is \textbf{more than all 5 EEG channels combined} (15 bytes)!
+
+In the original protocol, 18 bytes sent $1000\times$/sec = \textbf{18,000\,B/s just for PPG}.
+
+The heart pulse signal has meaningful content up to ${\sim}$25\,Hz. Nyquist requires $\geq$50\,Hz sampling. The optimized protocol sends PPG at 100\,Hz ($2\times$ Nyquist margin):
+
+\begin{align}
+\text{Original PPG:}\quad & 18 \text{\,B} \times 1000 \text{\,Hz} = 18{,}000 \text{\,B/s} \nonumber\\
+\text{Optimized PPG:}\quad & 18 \text{\,B} \times 100 \text{\,Hz} = 1{,}800 \text{\,B/s} \nonumber\\
+\text{Savings:}\quad & 16{,}200 \text{\,B/s}\;(90\% \text{ reduction for PPG alone!}) \nonumber
+\end{align}
+
+\subsection{If OpenBCI Had To Carry The Same Data}
+
+If OpenBCI Cyton needed to send the same sensor suite as InEar at 1000\,Hz:
+
+\begin{align}
+\text{Needed per sample:}\quad & 15 + 6 + 18 + 2 + 2 + 5 = 48 \text{\,bytes} \nonumber\\
+\text{Needed per second:}\quad & 48 \times 1000 = 48{,}000 \text{\,B/s} \nonumber\\
+\text{Available (8-N-1):}\quad & 115{,}200 \div 10 = 11{,}520 \text{\,B/s max} \nonumber
+\end{align}
+
+\begin{dangerbox}[Physically Impossible]
+OpenBCI would need $4.2\times$ more bandwidth than available. This is why direct OpenBCI-vs-InEar bandwidth comparisons are misleading --- they solve fundamentally different problems with fundamentally different hardware.
+\end{dangerbox}
+
+% =============================================================================
+\section{Bandwidth Analysis}
+\label{sec:bandwidth}
+
+\subsection{Serial 8-N-1 Basics}
+
+All three protocols use standard serial (UART) with 8-N-1 encoding. Each byte requires 10 bits on the wire:
+
+\[
+\underbrace{1}_{\text{start}} + \underbrace{8}_{\text{data}} + \underbrace{0}_{\text{parity}} + \underbrace{1}_{\text{stop}} = 10 \text{ bits per byte}
+\]
+
+Therefore:
+\[
+\text{Max bytes/sec} = \frac{\text{Baud rate}}{10} \quad(\text{NOT } \div 8\text{!})
+\]
+
+\subsection{Bandwidth Table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l R{2.5cm} R{2.5cm} R{2.5cm}}
+\toprule
+& \textbf{OpenBCI Cyton} & \textbf{InEar Original} & \textbf{InEar Optimized} \\
+\midrule
+Baud rate & 115,200 & 2,000,000 & 2,000,000 \\
+Max B/s (baud $\div$ 10) & 11,520 & 200,000 & 200,000 \\
+Packet size & 33\,B & 56\,B & 26--54\,B \\
+Sample rate & 250\,Hz & 1,000\,Hz & 1,000\,Hz \\
+Actual B/s & 8,250 & 56,000 & ${\sim}$28,500 \\
+Wire bit rate & 82,500\,bps & 560,000\,bps & ${\sim}$285,000\,bps \\
+\textbf{Utilization} & \textbf{71.6\%} & \textbf{28.0\%} & \textbf{14.3\%} \\
+\textbf{Headroom} & \textbf{28.4\%} \textcolor{warnyellow}{$\triangle$} & \textbf{72.0\%} \textcolor{okgreen}{\ding{51}} & \textbf{85.7\%} \textcolor{okgreen}{\ding{51}} \\
+\bottomrule
+\end{tabular}
+\caption{Bandwidth utilization comparison}
+\label{tab:bandwidth}
+\end{table}
+
+\subsection{Headroom Visualization}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.2cm, y=1cm]
+    % OpenBCI
+    \node[anchor=east] at (-1, 2) {\small\textbf{OpenBCI Cyton}};
+    \fill[codeblue] (0, 1.7) rectangle (35.8, 2.3);
+    \fill[backgray] (35.8, 1.7) rectangle (50, 2.3);
+    \draw (0, 1.7) rectangle (50, 2.3);
+    \node at (25, 2) {\small\color{white}\textbf{71.6\%}};
+    \node[anchor=west] at (51, 2) {\small\textcolor{warnyellow}{TIGHT!}};
+    
+    % InEar Original
+    \node[anchor=east] at (-1, 1) {\small\textbf{InEar Original}};
+    \fill[codeblue] (0, 0.7) rectangle (14, 1.3);
+    \fill[backgray] (14, 0.7) rectangle (50, 1.3);
+    \draw (0, 0.7) rectangle (50, 1.3);
+    \node at (7, 1) {\small\color{white}\textbf{28\%}};
+    \node at (32, 1) {\small\color{codegray} headroom};
+    
+    % InEar Optimized
+    \node[anchor=east] at (-1, 0) {\small\textbf{InEar Optimized}};
+    \fill[codeblue] (0, -0.3) rectangle (7.15, 0.3);
+    \fill[backgray] (7.15, -0.3) rectangle (50, 0.3);
+    \draw (0, -0.3) rectangle (50, 0.3);
+    \node[anchor=west] at (8, 0) {\small\color{codegray} 14.3\% --- massive headroom};
+\end{tikzpicture}
+\caption{Bandwidth utilization comparison (bar chart). Each bar represents the percentage of the serial link capacity used.}
+\label{fig:headroom}
+\end{figure}
+
+\subsection{Where The Bytes Go --- InEar Original}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l R{2cm} R{1.5cm}}
+\toprule
+\textbf{Component} & \textbf{B/s} & \textbf{\% of total} \\
+\midrule
+EEG (brain signals) & 15,000 & 26.8\% \\
+\textbf{PPG (heart pulse)} & \textbf{18,000} & \textbf{32.1\%} \\
+Accelerometer & 6,000 & 10.7\% \\
+Temp + Battery & 4,000 & 7.1\% \\
+Sync & 2,000 & 3.6\% \\
+\textbf{Padding (wasted!)} & \textbf{13,000} & \textbf{23.2\%} \\
+Overhead (hdr+chk+ftr) & 6,000 & 10.7\% \\
+\midrule
+\textbf{Total} & \textbf{56,000} & \\
+\bottomrule
+\end{tabular}
+\caption{Byte budget breakdown --- InEar Original. PPG + Padding = 31,000\,B/s = 55\% of all traffic!}
+\end{table}
+
+\subsection{Where The Bytes Go --- InEar Optimized}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l R{2cm} R{1.5cm}}
+\toprule
+\textbf{Component} & \textbf{B/s} & \textbf{\% of total} \\
+\midrule
+EEG (every packet) & 15,000 & 52.6\% \\
+Accel (every 4th) & 1,500 & 5.3\% \\
+PPG (every 10th) & 1,800 & 6.3\% \\
+Health (every 100th) & 40 & 0.1\% \\
+Headers/footers & ${\sim}$10,160 & 35.6\% \\
+\midrule
+\textbf{Total} & $\mathbf{{\sim}28{,}500}$ & \\
+\bottomrule
+\end{tabular}
+\caption{Byte budget breakdown --- InEar Optimized. \textbf{Savings vs.\ original: ${\sim}$49\%}}
+\end{table}
+
+% =============================================================================
+\section{Stream Behavior Over Time}
+\label{sec:stream-behavior}
+
+\subsection{Packet Rhythm Comparison}
+
+\begin{lstlisting}[style=diagram, caption={Packet timing comparison}]
+OpenBCI Cyton (250 Hz, uniform):
+ --[33B]---[33B]---[33B]---[33B]---[33B]---  (4 ms apart)
+
+InEar Original (1000 Hz, uniform but wasteful):
+ -[56]-[56]-[56]-[56]-[56]-[56]-[56]-[56]-  (1 ms apart, same every time)
+
+InEar Optimized (1000 Hz, variable):
+ -[26]-[26]-[26]-[32]-[26]-[26]-[26]-[32]-[26]-[50]-[26]-[26]-
+   ^         ^              ^          ^
+   |         |              |          +- EEG + accel + PPG (every 20th)
+   |         |              +- EEG + accel (every 4th)
+   |         +- EEG + accel (every 4th)
+   +- EEG only (most common - small and fast!)
+\end{lstlisting}
+
+\subsection{Optimized Packet Distribution Per Second}
+
+In one second (1000 packets), the optimized protocol sends:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Packet Type} & \textbf{Size} & \textbf{Count/sec} & \textbf{\% of packets} \\
+\midrule
+EEG-only & 26\,B & 749 & 74.9\% \\
+EEG + Accel & 32\,B & 200 & 20.0\% \\
+EEG + PPG & 44\,B & 40 & 4.0\% \\
+EEG + Accel + PPG & 50\,B & 9 & 0.9\% \\
+EEG + Health & 30\,B & ${\sim}$1 & 0.1\% \\
+EEG + Full Sync & 54\,B & 1 & 0.1\% \\
+\midrule
+\textbf{Total} & & \textbf{1000} & \\
+\bottomrule
+\end{tabular}
+\caption{Packet type distribution. 75\% of packets are the small 26-byte EEG-only type.}
+\end{table}
+
+\subsection{Sample-and-Hold: What The Receiver Does With Missing Data}
+
+When the optimized protocol sends an EEG-only packet (no accelerometer data), the receiver doesn't show a gap --- it \textbf{holds the last known value}:
+
+\begin{lstlisting}[style=diagram, caption={Sample-and-hold behavior for multi-rate sensors}]
+Time:   1ms   2ms   3ms   4ms   5ms   6ms   7ms   8ms
+EEG:    new   new   new   new   new   new   new   new   (every packet)
+Accel:  new   held  held  NEW   held  held  held  NEW   (every 4th)
+PPG:    new   held  held  held  held  held  held  held  (every 10th)
+\end{lstlisting}
+
+This is perfectly fine for slow signals because the accelerometer hasn't meaningfully changed in 4\,ms, and PPG hasn't changed in 10\,ms.
+
+% =============================================================================
+\section{Trade-Off Matrix: Original vs.\ Optimized}
+\label{sec:tradeoff-matrix}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l C{2.8cm} C{2.8cm} C{2.8cm}}
+\toprule
+\textbf{Dimension} & \textbf{InEar Original} & \textbf{InEar Optimized} & \textbf{Winner} \\
+\midrule
+Bandwidth & 56\,KB/s & ${\sim}$28.5\,KB/s & \textcolor{okgreen}{\ding{51}} Optimized (49\% less) \\
+Latency & 280\,$\mu$s wire & 130--270\,$\mu$s wire & \textcolor{okgreen}{\ding{51}} Optimized \\
+Integrity & XOR checksum & XOR checksum & = Tie \\
+Parser Complexity & Simple: fixed offsets & Complex: 14 types & \textcolor{okgreen}{\ding{51}} Original \\
+Firmware Complexity & Simple: fill 56\,B & Moderate: variable & \textcolor{okgreen}{\ding{51}} Original \\
+Jitter Robustness & Excellent: uniform & Good: variable sizes & \textcolor{okgreen}{\ding{51}} Original \\
+Packet Loss Robustness & Good: self-contained & Moderate: stale data & \textcolor{okgreen}{\ding{51}} Original \\
+Headroom & 72\% free & 86\% free & \textcolor{okgreen}{\ding{51}} Optimized \\
+Memory Efficiency & 13\,B wasted/pkt & Zero waste & \textcolor{okgreen}{\ding{51}} Optimized \\
+Extensibility & 13 reserved bytes & New packet type needed & \textcolor{okgreen}{\ding{51}} Original \\
+\bottomrule
+\end{tabularx}
+\caption{Head-to-head trade-off comparison}
+\label{tab:tradeoff}
+\end{table}
+
+% =============================================================================
+\section{Complete Optimization Taxonomy}
+\label{sec:taxonomy}
+
+Starting from the \textbf{original 56-byte fixed protocol}, 28 optimization tactics were identified across 7 categories.
+
+\subsection{Category 1: Bandwidth Optimization}
+\textit{Reduce bytes on the wire}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{1A} \implemented & Multi-rate aux sampling & Send aux sensors only at their Nyquist rate \\
+\tactic{1B} & Delta encoding for EEG & Send differences instead of absolute values \\
+\tactic{1C} & Variable-width integers & Small values use fewer bytes \\
+\tactic{1D} \implemented & Eliminate padding & Remove the 13 wasted bytes \\
+\tactic{1E} & PPG to 24-bit & PPG ADCs are 18--20\,bit; 24-bit is plenty \\
+\tactic{1F} & Smaller header & Reduce or compress header fields \\
+\tactic{1G} & Multi-sample batching & Pack N samples per packet, amortize overhead \\
+\bottomrule
+\end{tabularx}
+\caption{Category 1: Bandwidth optimization tactics}
+\end{table}
+
+\subsection{Category 2: Latency Optimization}
+\textit{Reduce ADC-to-buffer time}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{2A} & Reduce packet size & Smaller packet = faster on wire (covered by Cat.~1) \\
+\tactic{2B} & Increase baud rate & Teensy~4.1 supports up to 6\,Mbaud \\
+\tactic{2C} & USB flush optimization & Use \texttt{Serial.send\_now()} for immediate transfer \\
+\tactic{2D} & DMA SPI$\to$UART pipeline & Hardware transfers without CPU involvement \\
+\bottomrule
+\end{tabularx}
+\caption{Category 2: Latency optimization tactics}
+\end{table}
+
+\subsection{Category 3: Integrity Optimization}
+\textit{Better error detection/correction}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{3A} & CRC-8 or CRC-16 & Better error detection than XOR checksum \\
+\tactic{3B} & Forward Error Correction & Correct errors without retransmission (Hamming/RS) \\
+\tactic{3C} & Retransmission (ARQ) & Receiver requests re-send of bad packets \\
+\tactic{3D} & Longer sync pattern & 3--4 byte sync for fewer false positives \\
+\tactic{3E} & Explicit length field & Self-describing packets, forward-compatible \\
+\bottomrule
+\end{tabularx}
+\caption{Category 3: Integrity optimization tactics}
+\end{table}
+
+\subsection{Category 4: Parser/CPU Optimization}
+\textit{Reduce host processing cost}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{4A} & Ring buffer & Replace \texttt{std::deque} with fixed circular buffer \\
+\tactic{4B} & Zero-copy parsing & Parse directly from buffer, skip memcpy \\
+\tactic{4C} & SIMD byte conversion & Parallel 24-bit $\to$ 32-bit conversion \\
+\tactic{4D} & Remove \texttt{std::chrono} & Avoid syscalls during packet parsing \\
+\tactic{4E} & Batch \texttt{addToBuffer()} & Fewer lock acquisitions in Open Ephys \\
+\bottomrule
+\end{tabularx}
+\caption{Category 4: Parser/CPU optimization tactics}
+\end{table}
+
+\subsection{Category 5: Firmware CPU Optimization}
+\textit{Reduce Teensy processing cost}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{5A} & Precomputed templates & Pre-fill headers, only overwrite data fields \\
+\tactic{5B} & Packet type lookup table & Replace modulo operations with array lookup \\
+\tactic{5C} & ISR-based assembly & Build packets in interrupt handler \\
+\bottomrule
+\end{tabularx}
+\caption{Category 5: Firmware CPU optimization tactics}
+\end{table}
+
+\subsection{Category 6: Robustness Optimization}
+\textit{Improve connection reliability}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{6A} & Heartbeat/watchdog & Detect disconnections immediately \\
+\tactic{6B} & Connection handshake & Verify firmware version before streaming \\
+\tactic{6C} & Configurable sample rate & Host can change rate (250/500/1000/2000\,Hz) \\
+\tactic{6D} & Per-channel gain control & Host can set ADS1299 gain per channel \\
+\bottomrule
+\end{tabularx}
+\caption{Category 6: Robustness optimization tactics}
+\end{table}
+
+\subsection{Category 7: Data Quality Optimization}
+\textit{Improve scientific utility}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{ID} & \textbf{Tactic} & \textbf{Description} \\
+\midrule
+\tactic{7A} & Hardware clock sync & Sub-microsecond timing via host$\leftrightarrow$device sync \\
+\tactic{7B} & Impedance measurement & Report electrode impedance in packets \\
+\tactic{7C} & Higher sample rate & ADS1299 supports up to 16\,kHz \\
+\bottomrule
+\end{tabularx}
+\caption{Category 7: Data quality optimization tactics}
+\end{table}
+
+% =============================================================================
+\section{Optimization Tactic Details (All 28 Tactics)}
+\label{sec:tactic-details}
+
+\subsection{Category 1 --- Bandwidth Optimization}
+
+% --- 1A ---
+\subsubsection{1A --- Multi-Rate Auxiliary Sampling \implemented}
+
+Instead of sending every sensor at 1000\,Hz, send each at a rate matching its actual information content (Nyquist rate).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l r r r r}
+\toprule
+\textbf{Sensor} & \textbf{BW of Interest} & \textbf{Nyquist Min} & \textbf{Send Rate} & \textbf{Oversampling} \\
+\midrule
+EEG & 0.1--300\,Hz & 600\,Hz & 1000\,Hz & $1.67\times$ \\
+Accelerometer & 0--100\,Hz & 200\,Hz & 250\,Hz & $1.25\times$ \\
+PPG & 0.5--25\,Hz & 50\,Hz & 100\,Hz & $2\times$ \\
+Temperature & ${\sim}$0\,Hz (DC) & ${\sim}$1\,Hz & 10\,Hz & $10\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Nyquist justification for multi-rate scheduling}
+\end{table}
+
+\textbf{Physics justification}: Temperature changes over seconds, not milliseconds. Sending temperature $1000\times$/sec is like checking the weather every 3.6 seconds --- you'll get the same reading.
+
+\textbf{Trade-off}: Parser complexity rises from 1 packet type to 14 (7 base $\times$ 2 with marker flag). Receiver must implement sample-and-hold. If a PPG packet is lost, stale for 10\,ms instead of 1\,ms.
+
+\textbf{Impact}: Saves ${\sim}$49\% bandwidth ($56{,}000 \to {\sim}28{,}500$\,B/s).
+
+% --- 1B ---
+\subsubsection{1B --- Delta Encoding for EEG}
+
+Send the first sample as an absolute 24-bit value, then send only the \textit{difference} between consecutive samples using fewer bits. EEG at 1\,kHz changes very little sample-to-sample; a typical delta fits in 8--12 bits vs.\ 24 bits.
+
+\begin{lstlisting}[style=diagram, caption={Delta encoding example}]
+Absolute:  sample1 = 123456    -> 3 bytes (24-bit)
+           sample2 = 123489    -> 3 bytes (24-bit)
+           sample3 = 123501    -> 3 bytes (24-bit)
+
+Delta:     sample1 = 123456    -> 3 bytes (24-bit, keyframe)
+           d2 = +33            -> 1 byte  (8-bit delta)
+           d3 = +12            -> 1 byte  (8-bit delta)
+
+Savings: 9 bytes -> 5 bytes for 3 samples (44%)
+\end{lstlisting}
+
+\begin{dangerbox}[Critical Trade-off: Error Propagation]
+If you lose ONE packet, every subsequent sample is corrupted until the next keyframe. Requires periodic absolute keyframes (e.g., every 100th sample) and loss detection via sequence number gaps. Potential savings: 40--60\% for EEG data specifically.
+\end{dangerbox}
+
+% --- 1C ---
+\subsubsection{1C --- Variable-Width Integers (VarInt)}
+
+Encode values using a variable number of bytes --- small values use fewer bytes (like Protocol Buffers).
+
+\textbf{Trade-off}:
+\begin{itemize}
+    \item[\textcolor{warnred}{\ding{55}}] Packets have \textbf{unpredictable size} --- parser can't jump to fixed offsets
+    \item[\textcolor{warnred}{\ding{55}}] Bit-level parsing is expensive
+    \item[\textcolor{warnred}{\ding{55}}] Cannot pre-validate packet size
+    \item[\textcolor{okgreen}{\ding{51}}] Average savings of ${\sim}$30\% combined with delta encoding
+\end{itemize}
+
+\textbf{Verdict}: High complexity for moderate savings. Better suited for file formats than real-time streams.
+
+% --- 1D ---
+\subsubsection{1D --- Eliminate Reserved/Padding Bytes \implemented}
+
+The original protocol has 13 reserved bytes in every packet, filled with zeros. The optimized protocol removes them entirely.
+
+\[
+13 \text{\,bytes} \times 1000 \text{\,packets/sec} = 13{,}000 \text{\,B/s} = 130{,}000 \text{\,bits/sec} \;\textbf{WASTED}
+\]
+
+\textbf{Trade-off}: Removing reserved bytes means future sensors require defining a new packet type (which the optimized protocol already supports).
+
+\textbf{Impact}: Saves 13,000\,B/s --- more than the entire accelerometer data stream.
+
+% --- 1E ---
+\subsubsection{1E --- PPG to 24-bit (from 48-bit) \freewin}
+
+PPG is currently encoded as 48-bit (6 bytes/channel). Most PPG ADCs are 18--20\,bit. Using 24-bit (3 bytes) is more than enough.
+
+\begin{align}
+\text{Current:} \quad & 3 \text{ channels} \times 6 \text{\,B} = 18 \text{\,B/sample} \nonumber\\
+\text{Proposed:} \quad & 3 \text{ channels} \times 3 \text{\,B} = 9 \text{\,B/sample} \nonumber\\
+\text{Savings:} \quad & 9 \text{\,B per PPG packet} \nonumber
+\end{align}
+
+The MAX30102 PPG sensor has an 18-bit ADC. The firmware packs this into 48 bits using \texttt{packInt48BE()}, leaving the top 3 bytes always zero. 24-bit gives 16.7 million levels of precision for a signal with ${\sim}$18 bits of useful information.
+
+\textbf{Trade-off}: Essentially none. This is a \textbf{free win}.
+
+% --- 1F ---
+\subsubsection{1F --- Smaller Header/Footer}
+
+Reduce the header and/or footer byte count. Current: 2-byte header (\hexval{A5}\,\hexval{5A}) + 2-byte footer (\hexval{C0}\,\hexval{C0}) = 4\,bytes/packet.
+
+\textbf{False sync math}: With a 2-byte header, false sync probability is $1/65{,}536$. With 1-byte: $1/256$ --- $256\times$ more likely.
+
+\textbf{Verdict}: Marginal savings (1--3\,B/pkt) with meaningful reliability impact. Not recommended.
+
+% --- 1G ---
+\subsubsection{1G --- Multi-Sample Batching}
+
+Pack $N$ samples into a single packet, amortizing header/footer/checksum overhead.
+
+\begin{align}
+\text{Current (1/pkt):} \quad & 3 \times 26 = 78 \text{\,B for 3 samples, 33\,B overhead (42\%)} \nonumber\\
+\text{Batched (3/pkt):} \quad & 8 + 3 \times 15 + 3 = 56 \text{\,B for 3 samples, 11\,B overhead (20\%)} \nonumber
+\end{align}
+
+\textbf{Trade-off}:
+\begin{itemize}
+    \item[\textcolor{warnred}{\ding{55}}] Latency increases by $N\times$ (at 1\,kHz with $N=4$: 4\,ms instead of 1\,ms)
+    \item[\textcolor{warnred}{\ding{55}}] Losing one packet loses $N$ samples
+    \item[\textcolor{okgreen}{\ding{51}}] At $N=4$, overhead drops from 42\% to 17\%
+\end{itemize}
+
+\textbf{Verdict}: Poor fit for real-time neurofeedback; good for high-latency-tolerant recording.
+
+\subsection{Category 2 --- Latency Optimization}
+
+% --- 2A ---
+\subsubsection{2A --- Reduce Packet Size}
+
+Not a separate tactic --- it's the net result of Category 1. Smaller packets spend less time on the wire.
+
+\begin{align}
+\text{Original (56\,B):} \quad & 56 \times 10 / 2{,}000{,}000 = 280\,\mu\text{s} \nonumber\\
+\text{Optimized (26\,B):} \quad & 26 \times 10 / 2{,}000{,}000 = 130\,\mu\text{s} \;\;(54\% \text{ faster}) \nonumber
+\end{align}
+
+% --- 2B ---
+\subsubsection{2B --- Increase Baud Rate}
+
+Teensy~4.1 (ARM Cortex-M7, 600\,MHz) supports up to 6\,Mbaud.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r r r r}
+\toprule
+\textbf{Baud Rate} & \textbf{Max B/s} & \textbf{Wire time (56\,B)} & \textbf{Wire time (26\,B)} \\
+\midrule
+2,000,000 & 200,000 & 280\,$\mu$s & 130\,$\mu$s \\
+3,000,000 & 300,000 & 187\,$\mu$s & 87\,$\mu$s \\
+4,000,000 & 400,000 & 140\,$\mu$s & 65\,$\mu$s \\
+6,000,000 & 600,000 & 93\,$\mu$s & 43\,$\mu$s \\
+\bottomrule
+\end{tabular}
+\caption{Wire time at various baud rates}
+\end{table}
+
+\textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits, cable quality critical at $>$3\,Mbaud. Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.
+
+% --- 2C ---
+\subsubsection{2C --- USB Flush Optimization}
+
+Use \texttt{Serial.send\_now()} to force immediate USB packet transmission instead of waiting for the USB stack's default ${\sim}$1\,ms buffering interval.
+
+\begin{lstlisting}[style=cpp, caption={USB flush optimization}]
+Serial.write(packet, len);
+Serial.send_now();  // Force immediate USB transfer
+// USB packet sent on next USB frame (~125 us for USB 2.0 HS)
+\end{lstlisting}
+
+\textbf{Verdict}: Easy win --- single line of code, removes up to 1\,ms of non-deterministic latency. Currently \textbf{not implemented} in the firmware.
+
+% --- 2D ---
+\subsubsection{2D --- DMA SPI$\to$UART Pipeline}
+
+Use Direct Memory Access hardware to transfer data from ADS1299 SPI bus directly to UART without CPU involvement.
+
+\begin{lstlisting}[style=diagram, caption={CPU-mediated vs.\ DMA data flow}]
+Current:  ADS1299 --SPI--> [CPU reads] --> [CPU builds] --> [CPU writes UART]
+DMA:      ADS1299 --SPI--> [DMA->RAM]  --> [CPU builds] --> [DMA->UART]
+                            ^ HW only ^                      ^ HW only ^
+\end{lstlisting}
+
+\textbf{Verdict}: High-effort, high-reward. Best suited if Teensy needs additional processing alongside streaming.
+
+\subsection{Category 3 --- Integrity Optimization}
+
+% --- 3A ---
+\subsubsection{3A --- CRC-8 Instead of XOR \freewin}
+
+Same 1-byte cost, dramatically better error detection.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Error Type} & \textbf{XOR} & \textbf{CRC-8} \\
+\midrule
+Single-bit errors & 100\% & 100\% \\
+2-bit errors & 100\% & 100\% \\
+Odd \# of bit errors & 100\% & 100\% \\
+Even \# of bit errors & \textcolor{warnred}{0\%!!} & 99.6\% \\
+Burst errors ($\leq$8 bit) & ${\sim}$50\% & 100\% \\
+Random errors & ${\sim}$50\% & 99.6\% \\
+\bottomrule
+\end{tabular}
+\caption{Error detection: XOR vs.\ CRC-8}
+\end{table}
+
+CRC-8 requires a 256-byte lookup table and one table lookup per byte. At 56,000 lookups/sec --- negligible on a 600\,MHz Teensy or any modern PC.
+
+% --- 3B ---
+\subsubsection{3B --- Forward Error Correction (FEC)}
+
+Add redundancy bytes for error correction without retransmission (Hamming, Reed-Solomon).
+
+\textbf{Verdict}: Overkill for wired USB. USB~2.0 has hardware CRC16 on every packet. Only relevant for Bluetooth/WiFi migration.
+
+% --- 3C ---
+\subsubsection{3C --- Retransmission (ARQ)}
+
+Receiver sends NACK on bad packets; firmware re-sends.
+
+\textbf{Trade-off}: Adds 2--3\,ms latency per retransmit, requires bidirectional protocol and TX ring buffer on Teensy. On USB with near-zero loss rate: unnecessary.
+
+% --- 3D ---
+\subsubsection{3D --- Longer Sync Pattern}
+
+Use 3--4 byte sync instead of current 2-byte \hexval{A5}\,\hexval{5A}.
+
+\begin{align}
+\text{2-byte:} \quad & P(\text{false sync}) = 1/2^{16} = 1/65{,}536 \nonumber\\
+\text{3-byte:} \quad & P(\text{false sync}) = 1/2^{24} = 1/16{,}777{,}216 \nonumber\\
+\text{4-byte:} \quad & P(\text{false sync}) = 1/2^{32} \approx 1/4.3 \times 10^9 \nonumber
+\end{align}
+
+\textbf{Verdict}: Moderate value. Current 2-byte + checksum verification is already quite robust.
+
+% --- 3E ---
+\subsubsection{3E --- Explicit Length Field}
+
+Add a 1-byte length field so the parser knows the exact packet size before reading.
+
+\textbf{Trade-off}: +1\,byte/packet (1,000\,B/s) for forward-compatibility --- host can skip unknown packet types gracefully without a lookup table.
+
+\textbf{Verdict}: Excellent trade-off. Almost always worth it in evolving protocols.
+
+\subsection{Category 4 --- Parser/CPU Optimization (Host Side)}
+
+% --- 4A ---
+\subsubsection{4A --- Ring Buffer Instead of \texttt{std::deque} \freewin}
+
+The current parser uses \texttt{std::deque<uint8\_t>}. Each \texttt{push\_back()}/\texttt{pop\_front()} may allocate heap memory. At 28,500\,bytes/sec $\rightarrow$ up to 28,500 allocations/sec with poor cache locality.
+
+A fixed 16\,KB circular buffer eliminates all allocations during operation:
+
+\begin{lstlisting}[style=cpp, caption={Ring buffer implementation sketch}]
+class RingBuffer {
+    uint8_t buffer[16384];  // 16 KB, power of 2
+    size_t head = 0, tail = 0;
+public:
+    void push(const uint8_t* data, size_t len) {
+        for (size_t i = 0; i < len; i++)
+            buffer[(tail++) & 0x3FFF] = data[i];
+    }
+    uint8_t operator[](size_t i) const {
+        return buffer[(head + i) & 0x3FFF];
+    }
+    void consume(size_t n) { head += n; }
+    size_t available() const { return tail - head; }
+};
+\end{lstlisting}
+
+Zero allocation hot path, better cache performance, same semantics.
+
+% --- 4B ---
+\subsubsection{4B --- Zero-Copy Parsing}
+
+Parse values directly from the ring buffer instead of copying into a temporary struct first.
+
+\textbf{Trade-off}: Must handle ring buffer wrap-around mid-packet. Saves one memcpy per packet (56\,B $\times$ 1000/sec = 56\,KB/s of copying eliminated). Most impactful combined with 4A.
+
+% --- 4C ---
+\subsubsection{4C --- SIMD Byte Conversion}
+
+Convert 24-bit big-endian $\to$ 32-bit signed integers using SSE/AVX (x86) or NEON (ARM) in parallel.
+
+\textbf{Verdict}: Micro-optimization. Only 5 channels --- sequential code takes nanoseconds. Not worth the platform-specific complexity.
+
+% --- 4D ---
+\subsubsection{4D --- Remove \texttt{std::chrono} from Hot Path \freewin}
+
+The parser calls \texttt{std::chrono::steady\_clock::now()} on every \texttt{updateBuffer()} for bandwidth monitoring. On Windows this involves a kernel syscall.
+
+\textbf{Fix}: Replace with a simple packet counter check (\texttt{if (count \% 5000 == 0)}).
+
+\textbf{Effort}: ${\sim}$10 minutes. Replace 3--4 lines. \textbf{Easiest free win} in the entire taxonomy.
+
+% --- 4E ---
+\subsubsection{4E --- Batch \texttt{addToBuffer()} Calls}
+
+Currently 1 call per packet = 1000 lock cycles/sec. Batching $N$ samples reduces to $1000/N$ lock cycles.
+
+\textbf{Trade-off}: Adds up to $N$\,ms of batching latency. Good for throughput, bad for real-time latency.
+
+\subsection{Category 5 --- Firmware CPU Optimization (Teensy Side)}
+
+% --- 5A ---
+\subsubsection{5A --- Precomputed Packet Templates}
+
+Pre-fill static fields (header, footer, type) at startup into 7 template buffers. In ISR: \texttt{memcpy} template, overwrite only dynamic fields.
+
+\textbf{Trade-off}: Uses $7 \times 55 = 385$\,bytes of RAM. Teensy~4.1 has 1\,MB. Negligible.
+
+% --- 5B ---
+\subsubsection{5B --- Packet Type Lookup Table \freewin}
+
+Replace cascading modulo operations with a precomputed 1000-entry array.
+
+\begin{lstlisting}[style=cpp, caption={Packet type lookup table}]
+// Current: 5 modulo operations + 5 branches
+uint8_t getPacketType(uint32_t n) {
+    if (n % 1000 == 0) return 0x06;
+    if (n % 100 == 0)  return 0x04;
+    if (n % 20 == 0)   return 0x03;
+    if (n % 10 == 0)   return 0x02;
+    if (n % 4 == 0)    return 0x01;
+    return 0x00;
+}
+
+// Proposed: 1 modulo + 1 array read
+static uint8_t typeTable[1000];  // precomputed at startup
+uint8_t type = typeTable[sampleNum % 1000];
+\end{lstlisting}
+
+Uses 1000\,bytes of RAM. Teensy has 1\,MB. \textbf{Free win}.
+
+% --- 5C ---
+\subsubsection{5C --- ISR-Based Packet Assembly}
+
+Build packets inside the IntervalTimer ISR for deterministic timing.
+
+\textbf{Current status}: The existing firmware already does this (builds and sends in ISR callback). \textbf{Already implemented}.
+
+\subsection{Category 6 --- Robustness Optimization}
+
+% --- 6A ---
+\subsubsection{6A --- Heartbeat / Watchdog}
+
+Firmware sends a periodic ``I'm alive'' packet at ${\sim}$1\,Hz. If host doesn't receive it for $N$ seconds $\rightarrow$ connection lost.
+
+\begin{lstlisting}[style=diagram, caption={Heartbeat disconnect detection}]
+Normal:   Host <--- [Data] [Data] [HB] [Data] --- Teensy
+
+Failure:  Host <--- [Data] [Data]             --- (cable yanked!)
+          ...3 seconds, no heartbeat...
+          HOST: CONNECTION LOST -> show error, clean up
+\end{lstlisting}
+
+\textbf{Verdict}: Excellent addition. ${\sim}$10\,B/s overhead for fast disconnect detection.
+
+% --- 6B ---
+\subsubsection{6B --- Connection Handshake}
+
+Proper startup: \texttt{HELLO} $\to$ Device Info $\to$ \texttt{START} $\to$ streaming $\to$ \texttt{STOP} $\to$ \texttt{OK}.
+
+\textbf{Benefits}: Auto-detect firmware version/channel count/sample rate. Prevents protocol mismatch. Clean startup and shutdown.
+
+\textbf{Trade-off}: Adds ${\sim}$100\,ms to connection startup.
+
+% --- 6C ---
+\subsubsection{6C --- Configurable Sample Rate}
+
+Host commands Teensy to change sample rate at runtime.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r l}
+\toprule
+\textbf{Rate} & \textbf{Use Case} \\
+\midrule
+250\,Hz & Low power, clinical EEG \\
+500\,Hz & Balanced research EEG \\
+1000\,Hz & High-frequency EEG (current default) \\
+2000\,Hz & Fast neural events \\
+4000\,Hz & EMG, specialized \\
+\bottomrule
+\end{tabular}
+\caption{ADS1299 configurable sample rates}
+\end{table}
+
+\textbf{Verdict}: High value, moderate effort. Pairs naturally with handshake (6B).
+
+% --- 6D ---
+\subsubsection{6D --- Per-Channel Gain Control}
+
+Set ADS1299 PGA gain per channel at runtime. Gains: $1\times$, $2\times$, $4\times$, $6\times$, $8\times$, $12\times$, $24\times$.
+
+\textbf{Use case}: Channels 1--4 at $24\times$ (EEG) and channel 5 at $1\times$ (EMG for jaw clench detection).
+
+\subsection{Category 7 --- Data Quality Optimization}
+
+% --- 7A ---
+\subsubsection{7A --- Hardware Clock Synchronization}
+
+Synchronize Teensy's crystal with host PC clock. Current drift: ${\sim}$50\,ppm $\rightarrow$ 180\,ms after 1 hour.
+
+\textbf{Method}: Periodic NTP-style time exchange ($T_1, T_2, T_3, T_4$):
+\[
+\text{Offset} = \frac{(T_2 - T_1) + (T_3 - T_4)}{2}, \qquad
+\text{RTT} = (T_4 - T_1) - (T_3 - T_2)
+\]
+
+After correction: timestamps accurate to ${\sim}100\,\mu$s. Critical for multi-device synchronization.
+
+% --- 7B ---
+\subsubsection{7B --- Impedance Measurement}
+
+Use ADS1299's built-in impedance mode to check electrode contact quality.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r l l}
+\toprule
+\textbf{Impedance} & \textbf{Quality} & \textbf{Interpretation} \\
+\midrule
+$< 10$\,k$\Omega$ & \textcolor{okgreen}{\ding{51}} Good & Gel electrodes, well-placed \\
+$10$--$50$\,k$\Omega$ & \textcolor{warnyellow}{$\triangle$} Acceptable & Dry electrodes, may work \\
+$> 50$\,k$\Omega$ & \textcolor{warnred}{\ding{55}} Poor & Needs adjustment \\
+$> 1$\,M$\Omega$ & \textcolor{warnred}{\ding{55}} None & No electrode detected \\
+\bottomrule
+\end{tabular}
+\caption{Electrode impedance quality thresholds}
+\end{table}
+
+\textbf{Verdict}: High value for research. Usually done during setup, not live streaming.
+
+% --- 7C ---
+\subsubsection{7C --- Higher Sample Rate}
+
+ADS1299 supports up to 16\,kHz. Bandwidth implications:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r r r l}
+\toprule
+\textbf{Rate} & \textbf{B/s (opt)} & \textbf{Utilization} & \textbf{Status} \\
+\midrule
+250\,Hz & ${\sim}$7,125 & 3.6\% & OK \\
+500\,Hz & ${\sim}$14,250 & 7.1\% & OK \\
+1,000\,Hz & ${\sim}$28,500 & 14.3\% & Current \\
+2,000\,Hz & ${\sim}$57,000 & 28.5\% & OK \\
+4,000\,Hz & ${\sim}$114,000 & 57.0\% & Tight \\
+8,000\,Hz & ${\sim}$228,000 & 114\% & \textcolor{warnred}{Exceeds 2\,Mbaud!} \\
+16,000\,Hz & ${\sim}$456,000 & 228\% & \textcolor{warnred}{Need 6\,Mbaud+} \\
+\bottomrule
+\end{tabular}
+\caption{Sample rate vs.\ bandwidth utilization}
+\end{table}
+
+The current protocol supports up to ${\sim}$4000\,Hz within the 2\,Mbaud link budget.
+
+% =============================================================================
+\section{Full Trade-Off Matrix (All 28 Tactics)}
+\label{sec:full-matrix}
+
+Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metriceq\ = negligible change.
+
+\begin{landscape}
+% We can't use landscape without the lscape package, so use a tiny font and rotated table instead
+\end{landscape}
+
+{
+\setlength{\tabcolsep}{3pt}
+\tiny
+\begin{longtable}{l C{1.5cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.2cm} C{1.5cm} C{1.5cm}}
+\caption{Full 28-tactic trade-off matrix} \label{tab:full-matrix} \\
+\toprule
+\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\tactic{1A} Multi-rate &
+\metricdown\metricdown\ 49\% &
+\metricdown\ smaller &
+\metriceq &
+\metricup\metricup\ state mach. &
+\metricup\ modulo &
+\metricup\metricup\ 14 types &
+\metricdown\ stale risk \\
+
+\tactic{1B} Delta enc. &
+\metricdown\metricdown\metricdown\ 60\% &
+\metricdown\ smaller &
+\metricdown\metricdown\metricdown\ propagates &
+\metricup\metricup\ accum. &
+\metricup\ delta math &
+\metricup\metricup\metricup\ keyframes &
+\metricdown\metricdown\metricdown\ corrupts \\
+
+\tactic{1C} VarInt &
+\metricdown\metricdown\ 30\% &
+\metricdown\ smaller &
+\metricdown\ no pre-val &
+\metricup\metricup\metricup\ bit parse &
+\metricup\ encoding &
+\metricup\metricup\metricup\ no fixed &
+\metricdown\metricdown\ unpredict. \\
+
+\tactic{1D} Rm.\ padding &
+\metricdown\ 13\,B &
+\metricdown\ 13\,B less &
+\metriceq &
+\metricdown\ less chksum &
+\metricdown\ less fill &
+\metricdown\ simpler &
+\metricdown\ less mask \\
+
+\tactic{1E} PPG 24-bit &
+\metricdown\ 9\,B/PPG &
+\metricdown\ 9\,B less &
+\metriceq &
+\metricdown\ reuse parser &
+\metricdown\ simpler &
+\metricdown\ fewer widths &
+\metriceq \\
+
+\tactic{1F} Sm.\ header &
+\metricdown\ 2--4\,B &
+\metricdown\ slight &
+\metricdown\ less resync &
+\metriceq &
+\metricdown\ fewer B &
+\metricup\ tighter &
+\metricdown\ less recov. \\
+
+\tactic{1G} Batch $N$ &
+\metricdown\metricdown\ amortize &
+\metricup\metricup\ $N\times$1\,ms &
+\metricup\ lose $N$ &
+\metricup\ unpack &
+\metricup\ buffer &
+\metricup\metricup\ edge cases &
+\metricdown\metricdown\ more loss \\
+
+\tactic{2A} Reduce size &
+\metricdown\ (via Cat 1) &
+\metricdown\ fewer bits &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq \\
+
+\tactic{2B} Higher baud &
+\metriceq &
+\metricdown\ faster wire &
+\metricdown\ higher BER &
+\metriceq &
+\metriceq\ config &
+\metriceq\ config &
+\metricdown\ bit errors \\
+
+\tactic{2C} send\_now() &
+\metriceq &
+\metricdown\ 0.5\,ms &
+\metriceq &
+\metriceq &
+\metricup\ USB IRQs &
+\metricup\ ISR timing &
+\metriceq \\
+
+\tactic{2D} DMA &
+\metriceq &
+\metricdown\metricdown\ no CPU &
+\metriceq &
+\metriceq &
+\metricdown\metricdown\ freed &
+\metricup\metricup\ setup &
+\metricup\ HW xfer \\
+
+\tactic{3A} CRC-8 &
+\metriceq\ same &
+\metriceq &
+\metricdown\metricdown\ 99.6\% &
+\metricup\ table lkup &
+\metricup\ table lkup &
+\metricup\ 256\,B table &
+\metricup\ fewer undet. \\
+
+\tactic{3B} FEC &
+\metricup\metricup\ 20--50\% &
+\metricup\ enc/dec &
+\metricdown\metricdown\metricdown\ corrects &
+\metricup\metricup\metricup\ decode &
+\metricup\metricup\metricup\ encode &
+\metricup\metricup\metricup\ overkill &
+\metricup\metricup\ corrected \\
+
+\tactic{3C} Retransmit &
+\metricup\ NACK &
+\metricup\metricup\ round-trip &
+\metricdown\metricdown\ guaranteed &
+\metricup\metricup\ reorder &
+\metricup\metricup\ TX buf &
+\metricup\metricup\metricup\ bidir. &
+\metricup\metricup\metricup\ no loss \\
+
+\tactic{3D} Longer sync &
+\metricup\ +1--2\,B &
+\metriceq &
+\metricup\ lower false &
+\metriceq &
+\metriceq &
+\metriceq &
+\metricup\ reliable \\
+
+\tactic{3E} Length field &
+\metricup\ +1\,B &
+\metriceq &
+\metricup\ validate &
+\metricdown\ no LUT &
+\metricup\ +1 byte &
+\metricdown\ fwd-compat &
+\metricup\ new types \\
+
+\tactic{4A} Ring buffer &
+\metriceq &
+\metricdown\ alloc jitter &
+\metriceq &
+\metricdown\metricdown\ no heap &
+\metriceq &
+\metricup\ wraparound &
+\metricup\ determin. \\
+
+\tactic{4B} Zero-copy &
+\metriceq &
+\metricdown\ less memcpy &
+\metriceq &
+\metricdown\ no copy &
+\metriceq &
+\metricup\ wrap parse &
+\metriceq \\
+
+\tactic{4C} SIMD &
+\metriceq &
+\metricdown\ faster cvt &
+\metriceq &
+\metricdown\ parallel &
+\metriceq &
+\metricup\metricup\ platform &
+\metriceq \\
+
+\tactic{4D} Rm.\ chrono &
+\metriceq &
+\metricdown\ fewer sys &
+\metriceq &
+\metricdown\ no syscall &
+\metriceq &
+\metricdown\ simpler &
+\metricup\ determin. \\
+
+\tactic{4E} Batch addTo &
+\metriceq &
+\metricup\ batch delay &
+\metriceq &
+\metricdown\ fewer locks &
+\metriceq &
+\metricup\ batch code &
+\metriceq \\
+
+\tactic{5A} Templates &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq &
+\metricdown\ fewer wr. &
+\metricdown\ cleaner &
+\metriceq \\
+
+\tactic{5B} Type LUT &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq &
+\metricdown\ 1 vs 5 mod &
+\metricdown\ simpler &
+\metriceq \\
+
+\tactic{5C} ISR assembly &
+\metriceq &
+\metricdown\ no loop &
+\metriceq &
+\metriceq &
+\metricup\ longer ISR &
+\metricup\ overrun &
+\metricup\ determin. \\
+
+\tactic{6A} Heartbeat &
+\metricup\ ${\sim}$1\,pkt/s &
+\metriceq &
+\metriceq &
+\metricup\ timeout &
+\metricup\ HB gen &
+\metricup\ state mach. &
+\metricup\metricup\ disconnect \\
+
+\tactic{6B} Handshake &
+\metricup\ HS bytes &
+\metricup\ 100\,ms &
+\metricup\ ver.\ verify &
+\metricup\ HS FSM &
+\metricup\ cmd parser &
+\metricup\metricup\ bidir. &
+\metricup\metricup\ ver.\ match \\
+
+\tactic{6C} Config rate &
+\metriceq\ steady &
+\metriceq &
+\metriceq &
+\metricup\ handle chg &
+\metricup\ timer cfg &
+\metricup\metricup\ cmd proto &
+\metricup\ adaptable \\
+
+\tactic{6D} Gain ctrl &
+\metriceq\ steady &
+\metriceq &
+\metriceq &
+\metricup\ track gain &
+\metricup\ ADS writes &
+\metricup\metricup\ cmd proto &
+\metricup\ adapt sig. \\
+
+\tactic{7A} Clock sync &
+\metricup\ 2--4\,B &
+\metriceq &
+\metriceq &
+\metricup\ drift math &
+\metricup\ sync resp. &
+\metricup\metricup\ sync proto &
+\metricup\ drift det. \\
+
+\tactic{7B} Impedance &
+\metricup\ sync bytes &
+\metriceq &
+\metriceq &
+\metricup\ display &
+\metricup\metricup\ ADS mode &
+\metricup\metricup\ mode sw. &
+\metricup\metricup\ bad elec. \\
+
+\tactic{7C} Higher rate &
+\metricup\metricup\ linear &
+\metricdown\ temporal &
+\metriceq &
+\metricup\ more samp. &
+\metricup\ tighter &
+\metricup\ headroom &
+\metriceq \\
+
+\end{longtable}
+}
+
+% =============================================================================
+\section{Recommended ``Free Wins''}
+\label{sec:free-wins}
+
+These tactics improve at least one metric without meaningfully hurting any other:
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{c c l c X}
+\toprule
+\textbf{Priority} & \textbf{ID} & \textbf{Tactic} & \textbf{Effort} & \textbf{Benefit} \\
+\midrule
+\textbf{1st} & 4D & Remove \texttt{std::chrono} & 10\,min & Eliminates 1--3 syscalls per packet from parsing loop \\
+\textbf{1st} & 4A & Ring buffer & 1\,hr & Eliminates ${\sim}$28,500 heap allocs/sec, better cache \\
+\textbf{1st} & 1E & PPG to 24-bit & 30\,min & Saves 9\,B per PPG packet, no resolution loss \\
+\textbf{2nd} & 3A & CRC-8 & 30\,min & Same 1-byte cost, 99.6\% burst error detection (vs.\ 50\%) \\
+\textbf{2nd} & 5B & Packet type LUT & 15\,min & Replace 5 modulo + branch with 1 array lookup \\
+\textbf{2nd} & 5A & Precomputed templates & 20\,min & Pre-fill headers at startup, saves writes/sample \\
+\textbf{3rd} & 4E & Batch addToBuffer & 30\,min & Reduce lock contention in Open Ephys pipeline \\
+\textbf{3rd} & 3E & Explicit length field & 30\,min & +1\,B cost, protocol becomes self-describing \\
+\bottomrule
+\end{tabularx}
+\caption{Recommended free-win optimizations, prioritized by effort-to-benefit ratio}
+\label{tab:free-wins}
+\end{table}
+
+% =============================================================================
+\section{Why OpenBCI Comparison Is Not Apples-to-Apples}
+\label{sec:openbci-comparison}
+
+The three protocols solve fundamentally different problems:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l l l}
+\toprule
+& \textbf{OpenBCI Cyton} & \textbf{InEar Teensy} \\
+\midrule
+Link & Wireless (2.4\,GHz radio) & Wired (USB) \\
+Bottleneck & Radio BW (31\,B/pkt max) & Effectively unlimited \\
+EEG channels & 8 & 5 \\
+Sensor suite & EEG + accel only & EEG + accel + PPG + temp + batt + sync \\
+Primary use & General research EEG & Specialized in-ear wearable \\
+Baud rate & 115,200 (radio-limited) & 2,000,000 (USB-capable) \\
+Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
+\bottomrule
+\end{tabular}
+\caption{Fundamental hardware differences between OpenBCI and InEar}
+\end{table}
+
+\begin{infobox}[Key Insight]
+\textbf{OpenBCI's 71.6\% utilization is not ``worse''} --- it's operating near the physical limit of its wireless radio. It can't go faster without changing hardware. The InEar protocols have abundant headroom because USB is orders of magnitude faster than a 2.4\,GHz radio link.
+
+\textbf{If OpenBCI had to carry InEar's data}, it would need $>4\times$ its available bandwidth --- physically impossible without hardware changes.
+\end{infobox}
+
+% =============================================================================
+\section{Appendix: Serial 8-N-1 Bandwidth Math}
+\label{sec:appendix-serial-math}
+
+A common mistake in serial bandwidth calculations is using \texttt{baud\_rate / 8} instead of \texttt{baud\_rate / 10}.
+
+\subsection{What ``8-N-1'' Means}
+
+\begin{align}
+8 &= 8 \text{ data bits per character} \nonumber\\
+\text{N} &= \text{No parity bit} \nonumber\\
+1 &= 1 \text{ stop bit} \nonumber\\[1em]
+\text{Total:} \quad & \underbrace{1}_{\text{start}} + \underbrace{8}_{\text{data}} + \underbrace{0}_{\text{parity}} + \underbrace{1}_{\text{stop}} = 10 \text{ bits per byte on the wire} \nonumber
+\end{align}
+
+\subsection{The Math}
+
+\[
+\text{Bytes/sec} = \frac{\text{Baud rate}}{10}
+\]
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r r r}
+\toprule
+\textbf{Baud Rate} & \textbf{Correct ($\div 10$)} & \textbf{Wrong ($\div 8$)} \\
+\midrule
+115,200 & 11,520\,B/s & 14,400\,B/s \\
+2,000,000 & 200,000\,B/s & 250,000\,B/s \\
+\bottomrule
+\end{tabular}
+\caption{Correct vs.\ incorrect serial throughput calculations}
+\end{table}
+
+\subsection{Utilization Calculations}
+
+\begin{align}
+\textbf{OpenBCI Cyton:} \quad \frac{33 \times 250}{115{,}200 / 10} &= \frac{8{,}250}{11{,}520} = \mathbf{71.6\%} \\[0.5em]
+\textbf{InEar Original:} \quad \frac{56 \times 1000}{2{,}000{,}000 / 10} &= \frac{56{,}000}{200{,}000} = \mathbf{28.0\%} \\[0.5em]
+\textbf{InEar Optimized:} \quad \frac{{\sim}28{,}500}{2{,}000{,}000 / 10} &= \frac{28{,}500}{200{,}000} = \mathbf{14.3\%}
+\end{align}
+
+\vfill
+\begin{center}
+\rule{0.5\textwidth}{0.4pt}\\[0.5em]
+{\small\itshape Generated from analysis of the \texttt{open-ephys-eeg-tools} repository ---\\
+OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
+\end{center}
+
+\end{document}

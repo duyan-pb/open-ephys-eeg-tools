@@ -264,13 +264,17 @@ Safety margin = 2,000,000 / 560,000 = 3.57×
 ```
 Packet size:        56 bytes
 Sample rate:        1000 Hz
-Data rate:          56,000 bytes/sec = 448,000 bits/sec
+Data rate:          56,000 bytes/sec
+
+Serial (8-N-1):     10 bits per byte (1 start + 8 data + 1 stop)
+Wire bit rate:      56,000 × 10 = 560,000 bits/sec
+
+Serial bandwidth:   2,000,000 baud
+Max throughput:     2,000,000 / 10 = 200,000 bytes/sec
+Utilization:        56,000 / 200,000 = 28.0%
 
 USB transfer:       ~500 µs per bulk transfer (typical)
 Packets per USB:    ~50-100 packets batched
-
-Serial bandwidth:   2,000,000 baud
-Utilization:        448,000 / 2,000,000 = 22.4%
 ```
 
 ### 6.2 Latency Budget
