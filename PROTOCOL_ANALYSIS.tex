@@ -26,7 +26,6 @@
 \usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
-\usepackage{lscape}
 \usepackage{textcomp}
 \usepackage{hyperref}
 \usepackage{cleveref}
@@ -199,7 +198,7 @@ OpenBCI Cyton, InEar Teensy Source, and InEar Teensy Optimized plugins.}
 \end{titlepage}
 
 % --- Table of Contents ---
-\setcounter{page}{1}
+\pagenumbering{arabic}
 \tableofcontents
 \newpage
 
@@ -280,7 +279,7 @@ Same hardware as the original, but with a redesigned protocol that sends sensor 
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=0.88em, bitheight=2.5em]{33}
+\begin{bytefield}[bitwidth=0.82em, bitheight=2.5em]{33}
     \bitheader{0,1,2,4,7,10,13,16,19,22,25,26,32} \\
     \bitbox{1}{\tiny\texttt{0xA0}\\START} &
     \bitbox{1}{\tiny SEQ} &
@@ -315,7 +314,7 @@ No checksum! Relies on USB's own error checking. Sent wirelessly $\rightarrow$ s
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=0.60em, bitheight=2.5em]{56}
+\begin{bytefield}[bitwidth=0.55em, bitheight=2.5em]{56}
     \bitheader{0,2,6,7,22,28,46,48,50,52,53,54} \\
     \bitbox{2}{\tiny START\\A5\,5A} &
     \bitbox{4}{\tiny TIMESTAMP} &
@@ -385,7 +384,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=1.2em, bitheight=2.5em]{26}
+\begin{bytefield}[bitwidth=1.1em, bitheight=2.5em]{26}
     \bitheader{0,2,3,4,8,23,24,25} \\
     \bitbox{2}{\tiny START\\A5\,5A} &
     \bitbox{1}{\tiny TYPE\\\hexval{00}} &
@@ -402,7 +401,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=1.0em, bitheight=2.5em]{32}
+\begin{bytefield}[bitwidth=0.9em, bitheight=2.5em]{32}
     \bitheader{0,2,3,4,8,23,29,30,31} \\
     \bitbox{2}{\tiny START} &
     \bitbox{1}{\tiny TYPE\\\hexval{01}} &
@@ -420,7 +419,7 @@ Temperature & 10\,Hz & Every 100th packet & Near-DC signal \\
 
 \begin{figure}[H]
 \centering
-\begin{bytefield}[bitwidth=0.62em, bitheight=2.5em]{54}
+\begin{bytefield}[bitwidth=0.56em, bitheight=2.5em]{54}
     \bitheader{0,2,3,4,8,23,29,47,49,51,52,53} \\
     \bitbox{2}{\tiny ST} &
     \bitbox{1}{\tiny T\\\hexval{06}} &
@@ -494,7 +493,7 @@ Timestamp & Via aux (optional) & 4 bytes & 4 bytes \\
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{|l|R{1.2cm}|R{1.2cm}|R{1.5cm}|R{1.6cm}|R{1.5cm}|}
+\begin{tabular}{|l|R{1.2cm}|R{1.2cm}|R{1.5cm}|R{1.8cm}|R{1.5cm}|}
 \hline
 \textbf{Protocol} & \textbf{EEG} & \textbf{Aux} & \textbf{Payload} & \textbf{Overhead} & \textbf{Ovh.\,\%} \\\hline
 \hline
@@ -1028,7 +1027,8 @@ Teensy~4.1 (ARM Cortex-M7, 600\,MHz) supports up to 6\,Mbaud.
 \caption{Wire time at various baud rates}
 \end{table}
 
-\textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits, cable quality critical at $>$3\,Mbaud.
+\textbf{Trade-off}: Higher BER, USB-serial IC compatibility limits,
+cable quality critical at $>$3\,Mbaud.
 Low priority --- current 130\,$\mu$s is small vs.\ 1\,ms sample period.
 
 % --- 2C ---
@@ -1340,17 +1340,16 @@ The current protocol supports up to ${\sim}$4000\,Hz within the 2\,Mbaud link bu
 
 Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metriceq\ = negligible change.
 
-\begin{landscape}
 {
 \setlength{\tabcolsep}{3pt}
 \tiny
-\begin{longtable}{|l|C{1.5cm}|C{1.3cm}|C{1.3cm}|C{1.3cm}|C{1.3cm}|C{1.5cm}|C{1.5cm}|}
+\begin{longtable}{|l|C{1.5cm}|C{1.3cm}|C{1.3cm}|C{1.3cm}|C{1.3cm}|C{1.7cm}|C{1.5cm}|}
 \caption{Full 28-tactic trade-off matrix} \label{tab:full-matrix} \\
 \hline
-\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\\hline
+\textbf{Tactic} & \textbf{BW} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser} & \textbf{FW CPU} & \textbf{Complex.} & \textbf{Robust.} \\\hline
 \endfirsthead
 \hline
-\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\\hline
+\textbf{Tactic} & \textbf{BW} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser} & \textbf{FW CPU} & \textbf{Complex.} & \textbf{Robust.} \\\hline
 \endhead
 \hline
 \endfoot
@@ -1645,10 +1644,9 @@ These tactics improve at least one metric without meaningfully hurting any other
 
 \begin{table}[H]
 \centering
-\begin{tabularx}{\textwidth}{|c|c|l|l|X|}
+\begin{tabularx}{\textwidth}{|c|c|l|l|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Priority} & \textbf{ID} & \textbf{Tactic} & \textbf{Effort} & \textbf{Benefit} \\\hline
-\hline
 \textbf{1st} & 4D & Remove \texttt{std::chrono} & 10\,min & Eliminates 1--3 syscalls per packet from parsing loop \\
 \textbf{1st} & 4A & Ring buffer & 1\,hr & Eliminates ${\sim}$28,500 heap allocs/sec, better cache \\
 \textbf{1st} & 1E & PPG to 24-bit & 30\,min & Saves 9\,B per PPG packet, no resolution loss \\
@@ -1697,7 +1695,8 @@ Sample rate & 250\,Hz (radio-limited) & 1,000\,Hz \\
 \section{Appendix: Serial 8-N-1 Bandwidth Math}
 \label{sec:appendix-serial-math}
 
-A common mistake in serial bandwidth calculations is using \texttt{baud\_rate / 8} instead of \texttt{baud\_rate / 10}.
+A common mistake in serial bandwidth calculations is using
+\texttt{baud\_rate\,/\,8} instead of \texttt{baud\_rate\,/\,10}.
 
 \subsection{What ``8-N-1'' Means}
 
@@ -1719,7 +1718,6 @@ A common mistake in serial bandwidth calculations is using \texttt{baud\_rate / 
 \begin{tabular}{|r|r|r|}
 \hline
 \textbf{Baud Rate} & \textbf{Correct ($\div 10$)} & \textbf{Wrong ($\div 8$)} \\\hline
-\hline
 115,200 & 11,520\,B/s & 14,400\,B/s \\
 2,000,000 & 200,000\,B/s & 250,000\,B/s \\
 \hline
@@ -1902,7 +1900,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional accelerometer block (+6\,bytes). Types: \hexval{01}, \hexval{03}, \hexval{05}, \hexval{06}.}
 \label{tab:opt-accel}
 \small
-\begin{tabular}{|R{1.3cm}|R{0.8cm}|l|l|l|}
+\begin{tabular}{|R{1.5cm}|R{0.8cm}|l|l|l|}
 \hline
 \textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\\hline
 +0 & 2\,B & Accel\,X & int16 BE & X-axis acceleration \\
@@ -1919,7 +1917,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional PPG block (+18\,bytes). Types: \hexval{02}, \hexval{03}, \hexval{06}.}
 \label{tab:opt-ppg}
 \small
-\begin{tabular}{|R{1.3cm}|R{0.8cm}|l|l|l|}
+\begin{tabular}{|R{1.5cm}|R{0.8cm}|l|l|l|}
 \hline
 \textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\\hline
 +0 & 6\,B & PPG Red & uint48 BE & Red LED, 48-bit unsigned \\
@@ -1936,7 +1934,7 @@ The following blocks appear \textbf{after the EEG data} in the order listed. The
 \caption{Optional health block (+4\,bytes). Types: \hexval{04}, \hexval{05}, \hexval{06}.}
 \label{tab:opt-health}
 \small
-\begin{tabular}{|R{1.3cm}|R{0.8cm}|l|l|l|}
+\begin{tabular}{|R{1.5cm}|R{0.8cm}|l|l|l|}
 \hline
 \textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\\hline
 +0 & 2\,B & Temperature & int16 BE & Body temp (0.01\textdegree{}C units) \\
@@ -2010,13 +2008,13 @@ Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metric
 \setlength{\tabcolsep}{3pt}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
-\begin{longtable}{|l|C{1.6cm}|C{1.3cm}|C{1.3cm}|C{1.3cm}|C{1.3cm}|C{1.5cm}|C{1.5cm}|}
+\begin{longtable}{|l|C{1.8cm}|C{1.3cm}|C{1.5cm}|C{1.3cm}|C{1.3cm}|C{1.7cm}|C{1.7cm}|}
 \caption{All 28 optimization tactics --- trade-off matrix} \label{tab:tactic-quick-ref} \\
 \hline
-\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\\hline
+\textbf{Tactic} & \textbf{BW} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser} & \textbf{FW CPU} & \textbf{Complex.} & \textbf{Robust.} \\\hline
 \endfirsthead
 \hline
-\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\\hline
+\textbf{Tactic} & \textbf{BW} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser} & \textbf{FW CPU} & \textbf{Complex.} & \textbf{Robust.} \\\hline
 \endhead
 \hline
 \multicolumn{8}{|r|}{\footnotesize\itshape continued on next page\ldots} \\
