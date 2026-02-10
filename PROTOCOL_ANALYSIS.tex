@@ -26,6 +26,8 @@
 \usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{lscape}
+\usepackage{textcomp}
 \usepackage{hyperref}
 \usepackage{cleveref}
 \usepackage{tikz}
@@ -1744,6 +1746,614 @@ A common mistake in serial bandwidth calculations is using \texttt{baud\_rate / 
 \textbf{InEar Original:} \quad \frac{56 \times 1000}{2{,}000{,}000 / 10} &= \frac{56{,}000}{200{,}000} = \mathbf{28.0\%} \\[0.5em]
 \textbf{InEar Optimized:} \quad \frac{{\sim}28{,}500}{2{,}000{,}000 / 10} &= \frac{28{,}500}{200{,}000} = \mathbf{14.3\%}
 \end{align}
+
+% =============================================================================
+\newpage
+\section{Appendix: Byte-Level Packet Offset Tables}
+\label{sec:appendix-byte-offsets}
+
+These tables give the exact byte offset, size, and data format of every field in every packet. Use them as a \textbf{parsing reference} --- each row tells you exactly where in the raw byte stream to find a given value.
+
+\subsection{OpenBCI Cyton --- 33 Bytes (Fixed)}
+
+\begin{table}[H]
+\centering
+\caption{OpenBCI Cyton byte-level packet layout}
+\label{tab:openbci-offsets}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
+0 & 1\,B & Header & \hexval{A0} & Sync byte (constant) \\
+1 & 1\,B & Sample \# & uint8 & Counter 0--255 (wraps) \\
+\midrule
+2--4 & 3\,B & EEG Ch\,1 & int24 BE & Channel 1, 24-bit signed \\
+5--7 & 3\,B & EEG Ch\,2 & int24 BE & Channel 2, 24-bit signed \\
+8--10 & 3\,B & EEG Ch\,3 & int24 BE & Channel 3, 24-bit signed \\
+11--13 & 3\,B & EEG Ch\,4 & int24 BE & Channel 4, 24-bit signed \\
+14--16 & 3\,B & EEG Ch\,5 & int24 BE & Channel 5, 24-bit signed \\
+17--19 & 3\,B & EEG Ch\,6 & int24 BE & Channel 6, 24-bit signed \\
+20--22 & 3\,B & EEG Ch\,7 & int24 BE & Channel 7, 24-bit signed \\
+23--25 & 3\,B & EEG Ch\,8 & int24 BE & Channel 8, 24-bit signed \\
+\midrule
+26--31 & 6\,B & Aux Data & varies & Format depends on footer byte \\
+32 & 1\,B & Footer & \hexval{C0}--\hexval{C6} & Packet type indicator \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{33 bytes}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{OpenBCI Cyton auxiliary data interpretation (bytes 26--31)}
+\label{tab:openbci-aux}
+\small
+\begin{tabular}{c l l}
+\toprule
+\textbf{Footer} & \textbf{Aux Layout (bytes 26--31)} & \textbf{Description} \\
+\midrule
+\hexval{C0} & AccX[2] \textbar{} AccY[2] \textbar{} AccZ[2] & Accelerometer, 3$\times$16-bit signed BE \\
+\hexval{C1}--\hexval{C4} & \multicolumn{2}{l}{Timestamp \& accel (firmware v2+)} \\
+\hexval{C5} & RAW[6] & Raw user-defined aux bytes \\
+\hexval{C6} & 0x00 $\times$ 6 & Unused (zero-filled) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{InEar Teensy Original --- 56 Bytes (Fixed)}
+
+\begin{table}[H]
+\centering
+\caption{InEar Original byte-level packet layout}
+\label{tab:inear-orig-offsets}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
+0 & 1\,B & Sync\,1 & \hexval{A5} & Header byte 1 (constant) \\
+1 & 1\,B & Sync\,2 & \hexval{5A} & Header byte 2 (constant) \\
+\midrule
+2--5 & 4\,B & Sample Count & uint32 LE & Packet counter (little-endian) \\
+\midrule
+6--8 & 3\,B & EEG Ch\,1 & int24 BE & Channel 1, 24-bit signed \\
+9--11 & 3\,B & EEG Ch\,2 & int24 BE & Channel 2, 24-bit signed \\
+12--14 & 3\,B & EEG Ch\,3 & int24 BE & Channel 3, 24-bit signed \\
+15--17 & 3\,B & EEG Ch\,4 & int24 BE & Channel 4, 24-bit signed \\
+18--20 & 3\,B & EEG Ch\,5 & int24 BE & Channel 5, 24-bit signed \\
+\midrule
+21--22 & 2\,B & Aux\,1 (Acc\,X) & int16 BE & Accelerometer X \\
+23--24 & 2\,B & Aux\,2 (Acc\,Y) & int16 BE & Accelerometer Y \\
+25--26 & 2\,B & Aux\,3 (Acc\,Z) & int16 BE & Accelerometer Z \\
+27--28 & 2\,B & Aux\,4 (PPG\,R) & int16 BE & PPG Red LED \\
+29--30 & 2\,B & Aux\,5 (PPG\,IR) & int16 BE & PPG IR LED \\
+31--32 & 2\,B & Aux\,6 (PPG\,G) & int16 BE & PPG Green LED \\
+33--34 & 2\,B & Aux\,7 (Temp) & int16 BE & Temperature (0.01\textdegree{}C) \\
+35--36 & 2\,B & Aux\,8 (Batt) & uint16 BE & Battery voltage (mV) \\
+37--38 & 2\,B & Aux\,9 (Sync) & int16 BE & External trigger \\
+\midrule
+39 & 1\,B & Marker & uint8 & Event marker byte \\
+40--52 & 13\,B & \textcolor{warnred}{Reserved} & zeros & \textcolor{warnred}{Padding --- WASTED} \\
+\midrule
+53 & 1\,B & Checksum & uint8 & XOR of bytes 0--52 \\
+54 & 1\,B & Footer\,1 & \hexval{C0} & End byte 1 (constant) \\
+55 & 1\,B & Footer\,2 & \hexval{C0} & End byte 2 (constant) \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{56 bytes} (13 wasted)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{InEar Teensy Optimized --- Variable Length}
+
+The optimized protocol has a \textbf{fixed 8-byte header} and \textbf{fixed 3-byte footer}, with variable data sections between them depending on the packet type.
+
+\subsubsection*{Header (always present --- 8 bytes)}
+
+\begin{table}[H]
+\centering
+\caption{Optimized protocol header (all packet types)}
+\label{tab:opt-header}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
+0 & 1\,B & Sync\,1 & \hexval{A5} & Header byte 1 (constant) \\
+1 & 1\,B & Sync\,2 & \hexval{5A} & Header byte 2 (constant) \\
+2 & 1\,B & Packet Type & uint8 enum & Content descriptor (see below) \\
+3 & 1\,B & Sequence & uint8 & Counter 0--255 (wraps) \\
+4--7 & 4\,B & Timestamp & uint32 BE & Microseconds since boot \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{8 bytes}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{EEG Data (always present --- 15 bytes)}
+
+\begin{table}[H]
+\centering
+\caption{EEG data block (present in every packet)}
+\label{tab:opt-eeg}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
+8 & 3\,B & EEG Ch\,1 & int24 BE & Channel 1, 24-bit signed \\
+11 & 3\,B & EEG Ch\,2 & int24 BE & Channel 2, 24-bit signed \\
+14 & 3\,B & EEG Ch\,3 & int24 BE & Channel 3, 24-bit signed \\
+17 & 3\,B & EEG Ch\,4 & int24 BE & Channel 4, 24-bit signed \\
+20 & 3\,B & EEG Ch\,5 & int24 BE & Channel 5, 24-bit signed \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{15 bytes} (offsets 8--22)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{Optional Data Blocks (variable offset)}
+
+The following blocks appear \textbf{after the EEG data} in the order listed. Their absolute offset depends on which preceding blocks are present.
+
+\begin{table}[H]
+\centering
+\caption{Optional marker block (+1\,byte). Present when type has \hexval{10} flag set.}
+\label{tab:opt-marker}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Offset*} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
+23* & 1\,B & Marker & uint8 & Experiment event trigger \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize *Offset is 23 when marker is the first optional block} \\
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Optional accelerometer block (+6\,bytes). Types: \hexval{01}, \hexval{03}, \hexval{05}, \hexval{06}.}
+\label{tab:opt-accel}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
++0 & 2\,B & Accel\,X & int16 BE & X-axis acceleration \\
++2 & 2\,B & Accel\,Y & int16 BE & Y-axis acceleration \\
++4 & 2\,B & Accel\,Z & int16 BE & Z-axis acceleration \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{6 bytes}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Optional PPG block (+18\,bytes). Types: \hexval{02}, \hexval{03}, \hexval{06}.}
+\label{tab:opt-ppg}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
++0 & 6\,B & PPG Red & uint48 BE & Red LED, 48-bit unsigned \\
++6 & 6\,B & PPG IR & uint48 BE & IR LED, 48-bit unsigned \\
++12 & 6\,B & PPG Green & uint48 BE & Green LED, 48-bit unsigned \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{18 bytes}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Optional health block (+4\,bytes). Types: \hexval{04}, \hexval{05}, \hexval{06}.}
+\label{tab:opt-health}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Relative} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
++0 & 2\,B & Temperature & int16 BE & Body temp (0.01\textdegree{}C units) \\
++2 & 2\,B & Battery & uint16 BE & Battery voltage (mV) \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{4 bytes}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{Footer (always present --- 3 bytes)}
+
+\begin{table}[H]
+\centering
+\caption{Optimized protocol footer (all packet types)}
+\label{tab:opt-footer}
+\small
+\begin{tabular}{R{1.2cm} R{0.8cm} l l l}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\
+\midrule
+$n{-}3$ & 1\,B & Checksum & uint8 & XOR of bytes 0 to $n{-}4$ \\
+$n{-}2$ & 1\,B & Footer\,1 & \hexval{C0} & End byte 1 (constant) \\
+$n{-}1$ & 1\,B & Footer\,2 & \hexval{C0} & End byte 2 (constant) \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{3 bytes} ($n$ = total packet length)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{Concrete Offset Maps Per Packet Type}
+
+For quick reference, these are the \textbf{absolute byte offsets} for every packet type:
+
+\begin{table}[H]
+\centering
+\caption{Absolute offset map for each optimized packet type (no marker)}
+\label{tab:opt-concrete-offsets}
+\scriptsize
+\begin{tabular}{l C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm} C{1.2cm}}
+\toprule
+\textbf{Block} & \textbf{\hexval{00}} & \textbf{\hexval{01}} & \textbf{\hexval{02}} & \textbf{\hexval{03}} & \textbf{\hexval{04}} & \textbf{\hexval{05}} & \textbf{\hexval{06}} \\
+& \tiny EEG & \tiny EEG+Acc & \tiny EEG+PPG & \tiny EEG+A+P & \tiny EEG+Hlt & \tiny EEG+A+H & \tiny Full \\
+\midrule
+Header & 0--7 & 0--7 & 0--7 & 0--7 & 0--7 & 0--7 & 0--7 \\
+EEG & 8--22 & 8--22 & 8--22 & 8--22 & 8--22 & 8--22 & 8--22 \\
+Accel & --- & 23--28 & --- & 23--28 & --- & 23--28 & 23--28 \\
+PPG & --- & --- & 23--40 & 29--46 & --- & --- & 29--46 \\
+Health & --- & --- & --- & --- & 23--26 & 29--32 & 47--50 \\
+Checksum & 23 & 29 & 41 & 47 & 27 & 33 & 51 \\
+Footer & 24--25 & 30--31 & 42--43 & 48--49 & 28--29 & 34--35 & 52--53 \\
+\midrule
+\textbf{Total} & \textbf{26\,B} & \textbf{32\,B} & \textbf{44\,B} & \textbf{50\,B} & \textbf{30\,B} & \textbf{36\,B} & \textbf{54\,B} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{infobox}[How to read this table]
+For example, to read accelerometer Y from a Type \hexval{03} (EEG+Accel+PPG) packet: go to the Accel row $\rightarrow$ offsets 23--28 $\rightarrow$ Accel\,Y is at relative +2 within the block $\rightarrow$ \textbf{absolute offset 25--26}, 16-bit signed big-endian.
+\end{infobox}
+
+% =============================================================================
+\newpage
+\section{Appendix: Optimization Tactic Quick-Reference Matrix}
+\label{sec:appendix-tactic-matrix}
+
+A compact reference of all 28 optimization tactics showing the impact on each metric dimension.
+
+Legend: \metricdown\ = reduces/improves, \metricup\ = increases/worsens, \metriceq\ = negligible change. More arrows = stronger effect.
+
+{
+\setlength{\tabcolsep}{3pt}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{l C{1.6cm} C{1.3cm} C{1.3cm} C{1.3cm} C{1.2cm} C{1.5cm} C{1.5cm}}
+\caption{All 28 optimization tactics --- trade-off matrix} \label{tab:tactic-quick-ref} \\
+\toprule
+\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Tactic} & \textbf{Bandwidth} & \textbf{Latency} & \textbf{Integrity} & \textbf{Parser CPU} & \textbf{FW CPU} & \textbf{Complexity} & \textbf{Robustness} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{8}{r}{\footnotesize\itshape continued on next page\ldots} \\
+\endfoot
+\bottomrule
+\endlastfoot
+
+\multicolumn{8}{l}{\textbf{Category 1 --- Bandwidth Optimization}} \\
+\midrule
+
+\tactic{1A} Multi-rate &
+\metricdown\metricdown\ 49\% &
+\metricdown\ smaller &
+\metriceq &
+\metricup\metricup\ state mach. &
+\metricup\ modulo &
+\metricup\metricup\ 14 types &
+\metricdown\ stale risk \\
+
+\tactic{1B} Delta enc. &
+\metricdown\metricdown\metricdown\ 60\% &
+\metricdown\ smaller &
+\metricdown\metricdown\metricdown\ propagates &
+\metricup\metricup\ accum. &
+\metricup\ delta math &
+\metricup\metricup\metricup\ keyframes &
+\metricdown\metricdown\metricdown\ corrupts \\
+
+\tactic{1C} VarInt &
+\metricdown\metricdown\ 30\% &
+\metricdown\ smaller &
+\metricdown\ no pre-val &
+\metricup\metricup\metricup\ bit parse &
+\metricup\ encoding &
+\metricup\metricup\metricup\ no fixed &
+\metricdown\metricdown\ unpredict. \\
+
+\tactic{1D} Rm.\ padding &
+\metricdown\ 13\,B &
+\metricdown\ 13\,B less &
+\metriceq &
+\metricdown\ less chksum &
+\metricdown\ less fill &
+\metricdown\ simpler &
+\metricdown\ less mask \\
+
+\tactic{1E} PPG 24-bit &
+\metricdown\ 9\,B/PPG &
+\metricdown\ 9\,B less &
+\metriceq &
+\metricdown\ reuse parser &
+\metricdown\ simpler &
+\metricdown\ fewer widths &
+\metriceq \\
+
+\tactic{1F} Sm.\ header &
+\metricdown\ 2--4\,B &
+\metricdown\ slight &
+\metricdown\ less resync &
+\metriceq &
+\metricdown\ fewer B &
+\metricup\ tighter &
+\metricdown\ less recov. \\
+
+\tactic{1G} Batch $N$ &
+\metricdown\metricdown\ amortize &
+\metricup\metricup\ $N\times$1\,ms &
+\metricup\ lose $N$ &
+\metricup\ unpack &
+\metricup\ buffer &
+\metricup\metricup\ edge cases &
+\metricdown\metricdown\ more loss \\
+
+\midrule
+\multicolumn{8}{l}{\textbf{Category 2 --- Latency Optimization}} \\
+\midrule
+
+\tactic{2A} Reduce size &
+\metricdown\ (via Cat 1) &
+\metricdown\ fewer bits &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq \\
+
+\tactic{2B} Higher baud &
+\metriceq &
+\metricdown\ faster wire &
+\metricdown\ higher BER &
+\metriceq &
+\metriceq\ config &
+\metriceq\ config &
+\metricdown\ bit errors \\
+
+\tactic{2C} send\_now() &
+\metriceq &
+\metricdown\ 0.5\,ms &
+\metriceq &
+\metriceq &
+\metricup\ USB IRQs &
+\metricup\ ISR timing &
+\metriceq \\
+
+\tactic{2D} DMA &
+\metriceq &
+\metricdown\metricdown\ no CPU &
+\metriceq &
+\metriceq &
+\metricdown\metricdown\ freed &
+\metricup\metricup\ setup &
+\metricup\ HW xfer \\
+
+\midrule
+\multicolumn{8}{l}{\textbf{Category 3 --- Integrity Optimization}} \\
+\midrule
+
+\tactic{3A} CRC-8 &
+\metriceq\ same &
+\metriceq &
+\metricdown\metricdown\ 99.6\% &
+\metricup\ table lkup &
+\metricup\ table lkup &
+\metricup\ 256\,B table &
+\metricup\ fewer undet. \\
+
+\tactic{3B} FEC &
+\metricup\metricup\ 20--50\% &
+\metricup\ enc/dec &
+\metricdown\metricdown\metricdown\ corrects &
+\metricup\metricup\metricup\ decode &
+\metricup\metricup\metricup\ encode &
+\metricup\metricup\metricup\ overkill &
+\metricup\metricup\ corrected \\
+
+\tactic{3C} Retransmit &
+\metricup\ NACK &
+\metricup\metricup\ round-trip &
+\metricdown\metricdown\ guaranteed &
+\metricup\metricup\ reorder &
+\metricup\metricup\ TX buf &
+\metricup\metricup\metricup\ bidir. &
+\metricup\metricup\metricup\ no loss \\
+
+\tactic{3D} Longer sync &
+\metricup\ +1--2\,B &
+\metriceq &
+\metricup\ lower false &
+\metriceq &
+\metriceq &
+\metriceq &
+\metricup\ reliable \\
+
+\tactic{3E} Length field &
+\metricup\ +1\,B &
+\metriceq &
+\metricup\ validate &
+\metricdown\ no LUT &
+\metricup\ +1 byte &
+\metricdown\ fwd-compat &
+\metricup\ new types \\
+
+\midrule
+\multicolumn{8}{l}{\textbf{Category 4 --- Parser/CPU Optimization}} \\
+\midrule
+
+\tactic{4A} Ring buffer &
+\metriceq &
+\metricdown\ alloc jitter &
+\metriceq &
+\metricdown\metricdown\ no heap &
+\metriceq &
+\metricup\ wraparound &
+\metricup\ determin. \\
+
+\tactic{4B} Zero-copy &
+\metriceq &
+\metricdown\ less memcpy &
+\metriceq &
+\metricdown\ no copy &
+\metriceq &
+\metricup\ wrap parse &
+\metriceq \\
+
+\tactic{4C} SIMD &
+\metriceq &
+\metricdown\ faster cvt &
+\metriceq &
+\metricdown\ parallel &
+\metriceq &
+\metricup\metricup\ platform &
+\metriceq \\
+
+\tactic{4D} Rm.\ chrono &
+\metriceq &
+\metricdown\ fewer sys &
+\metriceq &
+\metricdown\ no syscall &
+\metriceq &
+\metricdown\ simpler &
+\metricup\ determin. \\
+
+\tactic{4E} Batch addTo &
+\metriceq &
+\metricup\ batch delay &
+\metriceq &
+\metricdown\ fewer locks &
+\metriceq &
+\metricup\ batch code &
+\metriceq \\
+
+\midrule
+\multicolumn{8}{l}{\textbf{Category 5 --- Firmware CPU Optimization}} \\
+\midrule
+
+\tactic{5A} Templates &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq &
+\metricdown\ fewer wr. &
+\metricdown\ cleaner &
+\metriceq \\
+
+\tactic{5B} Type LUT &
+\metriceq &
+\metriceq &
+\metriceq &
+\metriceq &
+\metricdown\ 1 vs 5 mod &
+\metricdown\ simpler &
+\metriceq \\
+
+\tactic{5C} ISR assembly &
+\metriceq &
+\metricdown\ no loop &
+\metriceq &
+\metriceq &
+\metricup\ longer ISR &
+\metricup\ overrun &
+\metricup\ determin. \\
+
+\midrule
+\multicolumn{8}{l}{\textbf{Category 6 --- Robustness Optimization}} \\
+\midrule
+
+\tactic{6A} Heartbeat &
+\metricup\ ${\sim}$1\,pkt/s &
+\metriceq &
+\metriceq &
+\metricup\ timeout &
+\metricup\ HB gen &
+\metricup\ state mach. &
+\metricup\metricup\ disconnect \\
+
+\tactic{6B} Handshake &
+\metricup\ HS bytes &
+\metricup\ 100\,ms &
+\metricup\ ver.\ verify &
+\metricup\ HS FSM &
+\metricup\ cmd parser &
+\metricup\metricup\ bidir. &
+\metricup\metricup\ ver.\ match \\
+
+\tactic{6C} Config rate &
+\metriceq\ steady &
+\metriceq &
+\metriceq &
+\metricup\ handle chg &
+\metricup\ timer cfg &
+\metricup\metricup\ cmd proto &
+\metricup\ adaptable \\
+
+\tactic{6D} Gain ctrl &
+\metriceq\ steady &
+\metriceq &
+\metriceq &
+\metricup\ track gain &
+\metricup\ ADS writes &
+\metricup\metricup\ cmd proto &
+\metricup\ adapt sig. \\
+
+\midrule
+\multicolumn{8}{l}{\textbf{Category 7 --- Data Quality Optimization}} \\
+\midrule
+
+\tactic{7A} Clock sync &
+\metricup\ 2--4\,B &
+\metriceq &
+\metriceq &
+\metricup\ drift math &
+\metricup\ sync resp. &
+\metricup\metricup\ sync proto &
+\metricup\ drift det. \\
+
+\tactic{7B} Impedance &
+\metricup\ sync bytes &
+\metriceq &
+\metriceq &
+\metricup\ display &
+\metricup\metricup\ ADS mode &
+\metricup\metricup\ mode sw. &
+\metricup\metricup\ bad elec. \\
+
+\tactic{7C} Higher rate &
+\metricup\metricup\ linear &
+\metricdown\ temporal &
+\metriceq &
+\metricup\ more samp. &
+\metricup\ tighter &
+\metricup\ headroom &
+\metriceq \\
+
+\end{longtable}
+}
 
 \vfill
 \begin{center}
