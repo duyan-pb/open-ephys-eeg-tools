@@ -1,0 +1,723 @@
+% =============================================================================
+% InEar Teensy Compact Protocol Specification
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{textcomp}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{tikz}
+\usepackage{bytefield}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{pifont}
+
+% --- Colors ---
+\definecolor{backgray}{HTML}{F7F7F7}
+\definecolor{lightgray}{HTML}{D0D0D0}
+\definecolor{accentblue}{HTML}{2563EB}
+
+% --- Listings setup ---
+\lstdefinestyle{code}{
+    backgroundcolor=\color{backgray},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{black},
+    numbers=none,
+    tabsize=4,
+    showstringspaces=false,
+    commentstyle=\itshape,
+    keywordstyle=\bfseries,
+    stringstyle={},
+}
+
+\lstdefinestyle{cpp}{
+    style=code,
+    language=C++,
+    morekeywords={uint8_t, uint16_t, uint32_t, int32_t, int64_t, size_t},
+}
+
+\lstdefinestyle{diagram}{
+    backgroundcolor=\color{backgray},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=false,
+    frame=single,
+    rulecolor=\color{black},
+    numbers=none,
+    tabsize=2,
+    showstringspaces=false,
+}
+
+\lstset{style=code}
+
+% --- Custom commands ---
+\newcommand{\hexval}[1]{\texttt{0x#1}}
+\newlength{\pktbitwidth}
+\setlength{\pktbitwidth}{14.2pt}
+\hfuzz=30pt % suppress bytefield overfull warnings (diagrams span full margin width)
+
+% --- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small InEar Teensy Compact Protocol}
+\fancyhead[R]{\small v1.0}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Section formatting ---
+\titleformat{\section}
+    {\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+    {\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% --- Hyperref setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=accentblue,
+    citecolor=black,
+    pdftitle={InEar Teensy Compact Protocol Specification},
+    pdfauthor={InEar EEG Project},
+    pdfsubject={EEG Streaming Protocol},
+}
+
+% --- Compact lists ---
+\setlist{nosep, leftmargin=1.5em}
+
+% --- Table column types ---
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% =============================================================================
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries InEar Teensy Compact Protocol} \\[0.5em]
+    {\large Data Protocol Specification} \\[1em]
+    {\small Version 1.0 \quad---\quad February 2026}
+\end{center}
+
+\vspace{1em}
+\tableofcontents
+\vspace{1.5em}
+
+% =============================================================================
+\newpage
+\section{Protocol Overview}
+\label{sec:overview}
+
+\medskip\noindent
+\textbf{Key design decisions:}
+
+\begin{itemize}
+    \item \textbf{No footer bytes} --- the 2-byte \hexval{C0}\,\hexval{C0} end marker is eliminated entirely.  The parser relies on the sync header + known packet size.
+    \item \textbf{No sequence counter} --- the 4-byte microsecond timestamp provides both ordering and loss detection.
+    \item \textbf{TTL merged into TYPE byte} --- two TTL bits (input + output) share a byte with the 3-bit packet type, saving the former 1-byte marker field.
+    \item \textbf{EEG + at most one auxiliary sensor per packet} --- staggered scheduling avoids large combined packets.
+    \item \textbf{Built-in error signaling} --- a reserved bit pattern forces the host application back into handshake mode.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Protocol parameters at a glance}
+\label{tab:overview}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\\hline
+\hline
+EEG Sample Rate & 1000\,Hz \\
+EEG Channels & 8 (24-bit signed, 24\,B total) \\
+Baud Rate & 2,000,000 (2\,Mbaud) \\
+Byte Order & Big-Endian (network order) \\
+Packet Size & 32--38\,B (variable, depends on aux payload) \\
+Best Case (EEG only) & 32\,B \\
+Worst Case (EEG + Accel) & 38\,B \\
+Fixed Overhead & 8\,B (7\,B header + 1\,B checksum) \\
+Error Detection & XOR checksum (1\,B) \\
+\hline
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Packet Structure}
+\label{sec:packet-structure}
+
+\begin{center}
+\fbox{\texttt{START\,(2\,B)\;\textbar\; TIMESTAMP\,(4\,B)\;\textbar\; TYPE{+}TTL\,(1\,B)\;\textbar\; EEG\,(24\,B)\;\textbar\; [AUX]\;\textbar\; CHECKSUM\,(1\,B)}}
+\end{center}
+
+% ---------------------------------------------------------------------------
+\subsection{Header (7 bytes --- always present)}
+
+\begin{table}[H]
+\centering
+\caption{Header fields}
+\label{tab:header}
+\small
+\begin{tabular}{|R{1.2cm}|R{0.8cm}|l|l|l|}
+\hline
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\\hline
+0 & 1\,B & Sync\,1 & \hexval{A5} & Header byte 1 (constant) \\
+1 & 1\,B & Sync\,2 & \hexval{5A} & Header byte 2 (constant) \\
+2--5 & 4\,B & Timestamp & uint32 BE & Microseconds since boot \\
+6 & 1\,B & Type{+}TTL & bitfield & Packet type + TTL lines (\cref{sec:type-ttl}) \\
+\hline
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{7 bytes}} \\
+\hline
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\subsection{EEG Data (24 bytes --- always present)}
+
+Eight channels of 24-bit signed big-endian data from the ADS1299:
+
+\begin{table}[H]
+\centering
+\caption{EEG data block (8 channels $\times$ 3\,B = 24\,B)}
+\label{tab:eeg-block}
+\small
+\begin{tabular}{|R{1.2cm}|R{0.8cm}|l|l|l|}
+\hline
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\\hline
+7--9 & 3\,B & EEG Ch\,1 & int24 BE & Channel 1 \\
+10--12 & 3\,B & EEG Ch\,2 & int24 BE & Channel 2 \\
+13--15 & 3\,B & EEG Ch\,3 & int24 BE & Channel 3 \\
+16--18 & 3\,B & EEG Ch\,4 & int24 BE & Channel 4 \\
+19--21 & 3\,B & EEG Ch\,5 & int24 BE & Channel 5 \\
+22--24 & 3\,B & EEG Ch\,6 & int24 BE & Channel 6 \\
+25--27 & 3\,B & EEG Ch\,7 & int24 BE & Channel 7 \\
+28--30 & 3\,B & EEG Ch\,8 & int24 BE & Channel 8 \\
+\hline
+\multicolumn{2}{r}{\textbf{Total:}} & \multicolumn{3}{l}{\textbf{24 bytes} (offsets 7--30)} \\
+\hline
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\subsection{Optional Auxiliary Block (0--6 bytes)}
+\label{sec:aux-block}
+
+At most \textbf{one} auxiliary sensor is attached per packet.  The aux block immediately follows the EEG data at offset~31.  The TYPE field (bits 2--0) determines which block, if any, is present:
+
+\begin{table}[H]
+\centering
+\caption{Auxiliary data blocks by type code}
+\label{tab:aux-blocks}
+\small
+\begin{tabular}{|c|l|R{0.8cm}|l|l|}
+\hline
+\textbf{Type} & \textbf{Aux Block} & \textbf{Size} & \textbf{Format} & \textbf{Sensor IC} \\\hline
+\hexval{00} & (none) & 0\,B & --- & --- \\
+\hexval{01} & Accelerometer & 6\,B & 3$\times$ int16 BE & ADXL367 \\
+\hexval{02} & PPG + SpO\textsubscript{2} & 4\,B & uint24 BE + uint8 & MAXM86161 \\
+\hexval{03} & Temperature & 2\,B & int16 BE & TMP117 \\
+\hexval{04} & Battery & 1\,B & uint8 & (voltage divider) \\
+\hexval{05} & Reserved\,1 & --- & --- & --- \\
+\hexval{06} & Reserved\,2 & --- & --- & --- \\
+\hexval{07} & Reserved\,3 & --- & --- & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\subsection{Checksum (1 byte --- always last)}
+
+XOR of every preceding byte in the packet (offset~0 to $n{-}2$, where $n$ is the total packet length):
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|R{1.2cm}|R{0.8cm}|l|l|l|}
+\hline
+\textbf{Offset} & \textbf{Size} & \textbf{Field} & \textbf{Format} & \textbf{Description} \\\hline
+$n{-}1$ & 1\,B & Checksum & uint8 & XOR of bytes 0\,.\,.\,$(n{-}2)$ \\
+\hline
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\subsection{Packet Size}
+\label{sec:packet-sizes}
+
+\begin{table}[H]
+\centering
+\caption{Packet sizes for each type code}
+\label{tab:packet-sizes}
+\begin{tabular}{|c|l|c|c|c|}
+\hline
+\textbf{Type} & \textbf{Contents} & \textbf{Header} & \textbf{Aux} & \textbf{Total} \\\hline
+\hline
+\hexval{00} & EEG only (+ TTL) & 7 + 24 + 1 & 0\,B & \textbf{32\,B} \\
+\hexval{01} & EEG + Accelerometer & 7 + 24 + 1 & 6\,B & \textbf{38\,B} \\
+\hexval{02} & EEG + PPG + SpO\textsubscript{2} & 7 + 24 + 1 & 4\,B & \textbf{36\,B} \\
+\hexval{03} & EEG + Temperature & 7 + 24 + 1 & 2\,B & \textbf{34\,B} \\
+\hexval{04} & EEG + Battery & 7 + 24 + 1 & 1\,B & \textbf{33\,B} \\
+\hexval{05} & Reserved\,1 & --- & --- & --- \\
+\hexval{06} & Reserved\,2 & --- & --- & --- \\
+\hexval{07} & Reserved\,3 & --- & --- & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Packet Structure Diagrams}
+\label{sec:diagrams}
+
+\subsection{\texorpdfstring{Best Case --- EEG + TTL Only (32\,B)}{Best Case --- EEG + TTL Only (32 B)}}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=\pktbitwidth, bitheight=3.5em]{32}
+    \bitbox{3}{\small\textbf{START}\\\scriptsize\texttt{A5\,5A}\\\scriptsize 2\,B} &
+    \bitbox{5}{\small\textbf{TSMP}\\\scriptsize uint32 BE\\\scriptsize 4\,B} &
+    \bitbox{3}{\small\textbf{TYPE}\\\small\textbf{+TTL}\\\scriptsize 1\,B} &
+    \bitbox{18}{\normalsize\textbf{EEG} --- 8 channels $\times$ 3\,B = 24\,B} &
+    \bitbox{3}{\small\textbf{CHK}\\\scriptsize XOR\\\scriptsize 1\,B}
+\end{bytefield}
+\caption{EEG-only packet (Type \hexval{00}) --- 32 bytes.  Most common packet (${\sim}$80\,\% of all packets).}
+\label{fig:pkt-eeg-only}
+\end{figure}
+
+\subsection{\texorpdfstring{Worst Case --- EEG + Accelerometer (38\,B)}{Worst Case --- EEG + Accelerometer (38 B)}}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=\pktbitwidth, bitheight=3.5em]{32}
+    \bitbox{3}{\small\textbf{START}\\\scriptsize\texttt{A5\,5A}\\\scriptsize 2\,B} &
+    \bitbox{4}{\small\textbf{TSMP}\\\scriptsize uint32 BE\\\scriptsize 4\,B} &
+    \bitbox{3}{\small\textbf{TYPE}\\\small\textbf{+TTL}\\\scriptsize 1\,B} &
+    \bitbox{14}{\normalsize\textbf{EEG} --- 8 ch $\times$ 3\,B = 24\,B} &
+    \bitbox{5}{\small\textbf{ACCEL}\\\scriptsize X, Y, Z\\\scriptsize 6\,B} &
+    \bitbox{3}{\small\textbf{CHK}\\\scriptsize XOR\\\scriptsize 1\,B}
+\end{bytefield}
+\caption{EEG + Accelerometer packet (Type \hexval{01}) --- 38 bytes.  Largest packet in the protocol.}
+\label{fig:pkt-eeg-accel}
+\end{figure}
+
+\subsection{\texorpdfstring{EEG + PPG + SpO\textsubscript{2} (36\,B)}{EEG + PPG + SpO2 (36 B)}}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=\pktbitwidth, bitheight=3.5em]{32}
+    \bitbox{3}{\small\textbf{START}\\\scriptsize\texttt{A5\,5A}\\\scriptsize 2\,B} &
+    \bitbox{4}{\small\textbf{TSMP}\\\scriptsize uint32 BE\\\scriptsize 4\,B} &
+    \bitbox{3}{\small\textbf{TYPE}\\\small\textbf{+TTL}\\\scriptsize 1\,B} &
+    \bitbox{14}{\normalsize\textbf{EEG} --- 8 ch $\times$ 3\,B = 24\,B} &
+    \bitbox{3}{\small\textbf{PPG}\\\scriptsize uint24\\\scriptsize 3\,B} &
+    \bitbox{2}{\small\textbf{SpO$_2$}\\\scriptsize uint8\\\scriptsize 1\,B} &
+    \bitbox{3}{\small\textbf{CHK}\\\scriptsize XOR\\\scriptsize 1\,B}
+\end{bytefield}
+\caption{EEG + PPG + SpO\textsubscript{2} packet (Type \hexval{02}) --- 36 bytes.}
+\label{fig:pkt-eeg-ppg}
+\end{figure}
+
+\subsection{\texorpdfstring{EEG + Temperature (34\,B)}{EEG + Temperature (34 B)}}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=\pktbitwidth, bitheight=3.5em]{32}
+    \bitbox{3}{\small\textbf{START}\\\scriptsize\texttt{A5\,5A}\\\scriptsize 2\,B} &
+    \bitbox{4}{\small\textbf{TSMP}\\\scriptsize uint32 BE\\\scriptsize 4\,B} &
+    \bitbox{3}{\small\textbf{TYPE}\\\small\textbf{+TTL}\\\scriptsize 1\,B} &
+    \bitbox{15}{\normalsize\textbf{EEG} --- 8 ch $\times$ 3\,B = 24\,B} &
+    \bitbox{4}{\small\textbf{TEMP}\\\scriptsize int16 BE\\\scriptsize 2\,B} &
+    \bitbox{3}{\small\textbf{CHK}\\\scriptsize XOR\\\scriptsize 1\,B}
+\end{bytefield}
+\caption{EEG + Temperature packet (Type \hexval{03}) --- 34 bytes.}
+\label{fig:pkt-eeg-temp}
+\end{figure}
+
+\subsection{\texorpdfstring{EEG + Battery (33\,B)}{EEG + Battery (33 B)}}
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=\pktbitwidth, bitheight=3.5em]{32}
+    \bitbox{3}{\small\textbf{START}\\\scriptsize\texttt{A5\,5A}\\\scriptsize 2\,B} &
+    \bitbox{4}{\small\textbf{TSMP}\\\scriptsize uint32 BE\\\scriptsize 4\,B} &
+    \bitbox{3}{\small\textbf{TYPE}\\\small\textbf{+TTL}\\\scriptsize 1\,B} &
+    \bitbox{15}{\normalsize\textbf{EEG} --- 8 ch $\times$ 3\,B = 24\,B} &
+    \bitbox{4}{\small\textbf{BAT}\\\scriptsize uint8\\\scriptsize 1\,B} &
+    \bitbox{3}{\small\textbf{CHK}\\\scriptsize XOR\\\scriptsize 1\,B}
+\end{bytefield}
+\caption{EEG + Battery packet (Type \hexval{04}) --- 33 bytes.}
+\label{fig:pkt-eeg-bat}
+\end{figure}
+
+% =============================================================================
+\newpage
+\section{TYPE+TTL Byte}
+\label{sec:type-ttl}
+
+The single TYPE+TTL byte at offset~6 packs both TTL trigger lines and the packet type into 8~bits:
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=2.5em, bitheight=3em]{8}
+    \bitheader{0,1,2,3,4,5,6,7} \\
+    \bitbox{1}{\small\texttt{TTL}\\\texttt{IN}} &
+    \bitbox{1}{\small\texttt{TTL}\\\texttt{OUT}} &
+    \bitbox{3}{\small Reserved\\\small(\texttt{000})} &
+    \bitbox{3}{\small TYPE\\\small(3 bits)}
+\end{bytefield}
+\caption{TYPE+TTL byte bit-field layout.  Bit~7 = MSB, Bit~0 = LSB.}
+\label{fig:typettl-bitfield}
+\end{figure}
+
+\subsection{Bit Assignments}
+
+\begin{table}[H]
+\centering
+\caption{TYPE+TTL bit assignments}
+\label{tab:typettl-bits}
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Bit(s)} & \textbf{Name} & \textbf{Description} \\\hline
+\hline
+7 & \texttt{TTL\_IN} & External trigger input (1 = active) \\
+6 & \texttt{TTL\_OUT} & External trigger output (1 = active) \\
+5--3 & Reserved & Must be \texttt{000} for normal packets; \texttt{111} = error signal \\
+2--0 & TYPE & Packet type selector (0--7) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Type Code Chart}
+
+\begin{table}[H]
+\centering
+\caption{Type codes (bits 2--0 of TYPE+TTL byte)}
+\label{tab:type-codes}
+\begin{tabular}{|c|c|l|l|r|}
+\hline
+\textbf{Binary} & \textbf{Hex} & \textbf{Name} & \textbf{Auxiliary Data} & \textbf{Packet Size} \\\hline
+\hline
+\texttt{000} & \hexval{00} & \texttt{EEG} & None & 32\,B \\
+\texttt{001} & \hexval{01} & \texttt{EEG\_ACCEL} & Accelerometer (6\,B) & 38\,B \\
+\texttt{010} & \hexval{02} & \texttt{EEG\_PPG} & PPG + SpO\textsubscript{2} (4\,B) & 36\,B \\
+\texttt{011} & \hexval{03} & \texttt{EEG\_TEMP} & Temperature (2\,B) & 34\,B \\
+\texttt{100} & \hexval{04} & \texttt{EEG\_BAT} & Battery level (1\,B) & 33\,B \\
+\texttt{101} & \hexval{05} & \texttt{RESERVED\_1} & Future use & --- \\
+\texttt{110} & \hexval{06} & \texttt{RESERVED\_2} & Future use & --- \\
+\texttt{111} & \hexval{07} & \texttt{RESERVED\_3} & Future use & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{TTL Examples}
+
+\begin{table}[H]
+\centering
+\caption{Example TYPE+TTL byte values}
+\label{tab:typettl-examples}
+\small
+\begin{tabular}{|c|c|c|c|l|}
+\hline
+\textbf{Hex} & \textbf{Binary} & \textbf{TTL} & \textbf{Type} & \textbf{Meaning} \\\hline
+\hline
+\hexval{00} & \texttt{0\,0\,|\,000\,|\,000} & --- & EEG & EEG only, no trigger \\
+\hexval{80} & \texttt{1\,0\,|\,000\,|\,000} & IN & EEG & EEG only, TTL input active \\
+\hexval{C1} & \texttt{1\,1\,|\,000\,|\,001} & IN+OUT & ACCEL & EEG + Accel, both triggers \\
+\hexval{02} & \texttt{0\,0\,|\,000\,|\,010} & --- & PPG & EEG + PPG + SpO\textsubscript{2}, no trigger \\
+\hexval{43} & \texttt{0\,1\,|\,000\,|\,011} & OUT & TEMP & EEG + Temp, TTL output active \\
+\hexval{84} & \texttt{1\,0\,|\,000\,|\,100} & IN & BAT & EEG + Battery, TTL input active \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+\subsection{Error Signaling}
+
+When the reserved bits (5--3) are all set to \texttt{1}, the packet signals an \textbf{error condition}:
+
+\[
+\text{Error byte} = \texttt{??}\underbrace{\texttt{111}}_{\text{error flag}}\texttt{???}_{\text{binary}} \quad\longrightarrow\quad \text{bits 5--3} = \texttt{111}
+\]
+
+An error packet consists of the normal header structure with the error flag set and zeroed-out EEG data:
+
+\begin{center}
+\texttt{A5\,5A + TIMESTAMP\,(4\,B) + Error-flagged TYPE+TTL + 24$\times$\hexval{00} + CHECKSUM}
+\end{center}
+
+Upon receiving a packet with bits 5--3 = \texttt{111}, the Qt host application must:
+\begin{enumerate}
+    \item Stop data acquisition immediately.
+    \item Transition back to the handshake / connection state.
+    \item Report the error condition to the user.
+\end{enumerate}
+
+% =============================================================================
+\section{Byte Offset Reference}
+\label{sec:byte-offsets}
+
+\begin{table}[H]
+\centering
+\caption{Absolute byte offsets for all active packet types (8-channel EEG)}
+\label{tab:offsets}
+\small
+\begin{tabular}{|l|C{1.5cm}|C{1.5cm}|C{1.5cm}|C{1.5cm}|C{1.5cm}|}
+\hline
+\textbf{Block} & \textbf{\hexval{00}} & \textbf{\hexval{01}} & \textbf{\hexval{02}} & \textbf{\hexval{03}} & \textbf{\hexval{04}} \\
+& \tiny EEG & \tiny +Accel & \tiny +PPG & \tiny +Temp & \tiny +Bat \\
+\hline
+Sync\,(2\,B)       & 0--1   & 0--1   & 0--1   & 0--1   & 0--1 \\
+Timestamp\,(4\,B)  & 2--5   & 2--5   & 2--5   & 2--5   & 2--5 \\
+Type+TTL\,(1\,B)   & 6      & 6      & 6      & 6      & 6 \\
+EEG\,(24\,B)       & 7--30  & 7--30  & 7--30  & 7--30  & 7--30 \\
+Aux data           & ---    & 31--36 & 31--34 & 31--32 & 31 \\
+Checksum\,(1\,B)   & 31     & 37     & 35     & 33     & 32 \\
+\hline
+\textbf{Total}     & \textbf{32\,B} & \textbf{38\,B} & \textbf{36\,B} & \textbf{34\,B} & \textbf{33\,B} \\
+\hline
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Multi-Rate Sensor Scheduling}
+\label{sec:scheduling}
+
+Every packet contains \textbf{fresh} EEG data sampled at 1000\,Hz.  Each auxiliary sensor has its own dedicated packet type and sub-rate.  Because the protocol allows at most one auxiliary block per packet, collisions between sensors due at the same sample are resolved by \textbf{deferring} the lower-priority sensor by 1\,ms.  The deferred packet still carries a fresh EEG sample from that later time slot --- no EEG data is ever stale or duplicated.
+
+\begin{table}[H]
+\centering
+\caption{Sensor scheduling rates}
+\label{tab:schedule}
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Sensor} & \textbf{Rate (Hz)} & \textbf{Every $N$th pkt}\\\hline
+\hline
+EEG (+ TTL) & 1000 & Every packet\\
+Accelerometer & 200 & Every 5th\\
+PPG + SpO\textsubscript{2} & 100 & Every 10th\\
+Temperature & 1 & Every 1000th\\
+Battery & 1 & Every 1000th\\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{\texorpdfstring{Collision Resolution: 1\,ms Deferral}{Collision Resolution: 1 ms Deferral}}
+
+When two or more auxiliary sensors are due on the same sample, the highest-priority sensor claims that packet and lower-priority sensors are deferred by 1\,ms (one sample period).
+\medskip\noindent
+\textbf{Priority order (highest first):}
+\[
+\text{ACCEL} \;>\; \text{PPG} \;>\; \text{TEMP} \;>\; \text{BAT}
+\]
+
+\subsection{\texorpdfstring{1\,Hz Sensor Staggering}{1 Hz Sensor Staggering}}
+
+Temperature and Battery are both sampled at 1\,Hz (every 1000th packet).  To avoid them always colliding, they are staggered with a fixed offset so that only one 1\,Hz sensor is due at any given second boundary.
+
+\medskip\noindent
+\textbf{Note:} The exact staggering offset between Temperature and Battery is \textbf{TBD} (not yet finalized in the firmware).  The only hard constraint is:
+
+\begin{itemize}
+    \item Temperature and Battery must not be due on the same sample.
+    \item If either 1\,Hz sensor collides with an Accel or PPG packet, the 1\,Hz sensor is deferred by 1\,ms (same deferral rule as above).
+\end{itemize}
+
+\subsection{Example: 21 Consecutive Packets}
+
+\begin{lstlisting}[style=diagram, caption={Scheduling over 21 samples (Accel every 5th, PPG every 10th)}]
+Pkt#:   1     2     3     4     5     6     7     8     9     10
+EEG:   [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG]
+Aux:    ---   ---   ---   ---  ACCEL  ---   ---   ---   ---  ACCEL
+Size:   32B   32B   32B   32B   38B   32B   32B   32B   32B   38B
+
+Pkt#:   11    12    13    14    15    16    17    18    19    20    21
+EEG:   [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG] [EEG]
+Aux:    PPG   ---   ---   ---  ACCEL  ---   ---   ---   ---  ACCEL  PPG
+Size:   36B   32B   32B   32B   38B   32B   32B   32B   32B   38B   36B
+
+Note: PPG due at pkt 10 deferred to pkt 11 (Accel had priority).
+      PPG due at pkt 20 deferred to pkt 21 (Accel had priority).
+      Each deferred packet carries fresh EEG from its own time slot.
+\end{lstlisting}
+
+
+% =============================================================================
+\newpage
+\section{LSL Stream Metadata Reference}
+\label{sec:lsl}
+
+\subsection{StreamInfo Properties}
+
+\begin{table}[H]
+\centering
+\caption{LSL \texttt{StreamInfo} constructor parameters}
+\label{tab:lsl-streaminfo}
+\small
+\begin{tabularx}{\textwidth}{|l|l|l|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Property} & \textbf{EEG Stream} & \textbf{Marker Stream} & \textbf{Notes} \\\hline
+\hline
+\texttt{name} &
+\texttt{"InEarEEG"} &
+\texttt{"InEarEEG\_Markers"} &
+Human-readable name.  Must be unique on the network if multiple devices are present. \\
+\hline
+\texttt{type} &
+\texttt{"EEG"} &
+\texttt{"Markers"} &
+Content type.  \texttt{"EEG"} enables automatic recognition by LabRecorder and BIDS tools. \\
+\hline
+\texttt{channel\_count} &
+\texttt{8} &
+\texttt{1} &
+Must match the actual channel count.  Marker streams always use 1 channel. \\
+\hline
+\texttt{nominal\_srate} &
+\texttt{1000.0} &
+\texttt{0} &
+Sample rate in Hz.  Use \texttt{0} (\texttt{IRREGULAR\_RATE}) for event streams. \\
+\hline
+\texttt{channel\_format} &
+\texttt{cf\_float32} &
+\texttt{cf\_string} &
+\texttt{float32} for EEG data in $\mu$V; \texttt{string} for human-readable event labels. \\
+\hline
+\texttt{source\_id} &
+\texttt{"inear\_001"} &
+\texttt{"inear\_001\_markers"} &
+Unique per-device identifier.  Should remain stable across sessions. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{XML Channel Metadata}
+
+The \texttt{desc()} XML tree embeds per-channel metadata that downstream tools use for labeling, unit conversion, and montage reconstruction:
+
+\begin{lstlisting}[style=code, language=XML, caption={Recommended LSL XML metadata for EEG stream}]
+<channels>
+  <channel>
+    <label>EEG1</label>
+    <unit>microvolts</unit>
+    <type>EEG</type>
+  </channel>
+  <channel>
+    <label>EEG2</label>
+    <unit>microvolts</unit>
+    <type>EEG</type>
+  </channel>
+  <!-- ... channels 3-8 ... -->
+</channels>
+<acquisition>
+  <manufacturer>InEar Teensy</manufacturer>
+  <model>Compact Protocol v1</model>
+  <serial_number>DEVICE_SERIAL</serial_number>
+  <scale_factor>0.02235</scale_factor>
+</acquisition>
+\end{lstlisting}
+
+\subsection{Important Metadata Fields}
+
+\begin{table}[H]
+\centering
+\caption{LSL XML metadata fields that matter for interoperability}
+\label{tab:lsl-xml-fields}
+\small
+\begin{tabularx}{\textwidth}{|l|l|l|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{XML Path} & \textbf{Key} & \textbf{Example} & \textbf{Why It Matters} \\\hline
+\hline
+\texttt{channels/channel} & \texttt{label} & \texttt{Fp1}, \texttt{Cz} &
+Channel names for montage.  10--20 system names enable automatic montage in MNE-Python and EEGLAB. \\
+\hline
+\texttt{channels/channel} & \texttt{unit} & \texttt{microvolts} &
+Physical unit.  Must be \texttt{"microvolts"} (not \texttt{"uV"}) for consistent cross-tool behavior.\footnote{Observed codebase inconsistency: Python scripts use \texttt{"microvolts"} while C++ plugins use \texttt{"uV"}.  Standardize on \texttt{"microvolts"} to match the LSL/XDF conventions used by LabRecorder and MNE-Python.} \\
+\hline
+\texttt{channels/channel} & \texttt{type} & \texttt{EEG} &
+Per-channel type.  Enables mixed-type streams (e.g., channels 1--8 = EEG). \\
+\hline
+\texttt{acquisition} & \texttt{manufacturer} & \texttt{InEar Teensy} &
+Identifies hardware.  Used for provenance tracking in BIDS datasets. \\
+\hline
+\texttt{acquisition} & \texttt{model} & \texttt{Compact v1} &
+Protocol / firmware version.  Helps distinguish recordings made with different firmware. \\
+\hline
+\texttt{acquisition} & \texttt{serial\_number} & \texttt{INEAR\_042} &
+Hardware serial.  Enables per-device calibration and multi-device setups. \\
+\hline
+\texttt{acquisition} & \texttt{scale\_factor} & \texttt{0.02235} &
+$\mu$V per LSB.  If the stream pushes raw ADC counts, tools need this to convert to microvolts. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Marker Stream Configuration}
+
+\begin{table}[H]
+\centering
+\caption{Marker stream properties}
+\label{tab:lsl-markers}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Property} & \textbf{Value} & \textbf{Rationale} \\\hline
+\hline
+\texttt{type} & \texttt{"Markers"} & Standard LSL type for event streams \\
+\texttt{nominal\_srate} & \texttt{0} & Irregular rate --- events arrive asynchronously \\
+\texttt{channel\_format} & \texttt{cf\_string} & Human-readable labels \\
+\texttt{channel\_count} & \texttt{1} & Single event channel \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Marker string formats}
+\label{tab:lsl-marker-strings}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Event} & \textbf{Marker String} \\\hline
+\hline
+TTL input rising edge & \texttt{"TTL\_IN\_1"} \\
+TTL input falling edge & \texttt{"TTL\_IN\_0"} \\
+TTL output rising edge & \texttt{"TTL\_OUT\_1"} \\
+TTL output falling edge & \texttt{"TTL\_OUT\_0"} \\
+Experiment start & \texttt{"EXPERIMENT\_START"} \\
+Experiment stop & \texttt{"EXPERIMENT\_STOP"} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Outlet Configuration}
+
+\begin{table}[H]
+\centering
+\caption{LSL \texttt{StreamOutlet} parameters}
+\label{tab:lsl-outlet}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} & \textbf{Rationale} \\\hline
+\hline
+\texttt{chunk\_size} & $\lfloor \text{srate} / 20 \rfloor$ (= 50) & ${\sim}$50\,ms chunks for latency / efficiency balance \\
+\texttt{max\_buffered} & 360 (seconds) & 6-minute buffer for brief network stalls \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}

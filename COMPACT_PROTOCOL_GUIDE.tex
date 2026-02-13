@@ -1,0 +1,572 @@
+% =============================================================================
+% InEar Teensy Compact Protocol — Technical Documentation
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{textcomp}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{bytefield}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% --- Colors ---
+\definecolor{backgray}{HTML}{F7F7F7}
+\definecolor{accentblue}{HTML}{2563EB}
+\definecolor{notegreen}{HTML}{16A34A}
+\definecolor{warnred}{HTML}{DC2626}
+
+% --- Custom commands ---
+\newcommand{\hexval}[1]{\texttt{0x#1}}
+\newcommand{\field}[1]{\texttt{#1}}
+\newcommand{\notebox}[1]{\par\medskip\noindent\colorbox{backgray}{\parbox{\dimexpr\linewidth-2\fboxsep}{\textbf{Note:} #1}}\medskip}
+\newlength{\pktbitwidth}
+\setlength{\pktbitwidth}{14.8pt}
+\hfuzz=30pt
+
+% --- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Compact Protocol --- Technical Documentation}
+\fancyhead[R]{\small v1.0}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Section formatting ---
+\titleformat{\section}
+    {\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+    {\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% --- Hyperref setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=accentblue,
+    citecolor=black,
+    pdftitle={InEar Teensy Compact Protocol — Technical Documentation},
+    pdfauthor={InEar EEG Project},
+    pdfsubject={EEG Streaming Protocol},
+}
+
+% --- Compact lists ---
+\setlist{nosep, leftmargin=1.5em}
+
+% --- Table column types ---
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% =============================================================================
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries InEar Teensy Compact Protocol} \\[0.4em]
+    {\large Technical Documentation} \\[0.8em]
+    {\small Version 1.0 \quad---\quad February 2026}
+\end{center}
+
+\vspace{0.5em}
+
+\begin{abstract}
+\noindent
+This document describes the Compact Protocol, a binary streaming format used by the InEar EEG system to transmit 8-channel electroencephalography data and auxiliary sensor readings from a Teensy~4.1 microcontroller to a host application over a 2\,Mbaud serial link.  It is written for engineers implementing parsers, firmware modifications, or analysis pipelines, and focuses on how the protocol works, why it is designed the way it is, and what an implementer needs to know.
+\end{abstract}
+
+\vspace{0.5em}
+\tableofcontents
+\vspace{1em}
+
+% =============================================================================
+\section{Introduction}
+\label{sec:intro}
+
+The InEar EEG device streams continuous neural data from an ADS1299 analog front-end alongside readings from an accelerometer, a photoplethysmography (PPG) sensor, a temperature sensor, and a battery monitor.  All of these must travel over a single serial connection at 1000 samples per second with minimal latency.
+
+The Compact Protocol was designed to meet three constraints simultaneously:
+
+\begin{enumerate}
+    \item \textbf{Low overhead.}  Every unnecessary byte costs bandwidth on a 2\,Mbaud link.  The protocol uses 8~bytes of framing (header~+~checksum) per packet, yielding 25\% overhead on the most common 32-byte EEG-only packet.
+    \item \textbf{Deterministic parsing.}  The host must be able to locate packet boundaries reliably, even after partial data loss.  A two-byte sync word combined with a known packet length (derived from a single type field) makes this possible without footer bytes or escape sequences.
+    \item \textbf{TTL event support.}  Experimental triggers must be timestamped at EEG-sample resolution.  Rather than dedicating a separate byte, the protocol embeds two TTL bits directly into the type field.
+\end{enumerate}
+
+The result is a variable-length packet between 32 and 38~bytes that carries one EEG sample, optional auxiliary data from at most one additional sensor, and two TTL trigger bits---all protected by a single-byte XOR checksum.
+
+% =============================================================================
+\section{Architecture}
+\label{sec:architecture}
+
+\subsection{Data Flow}
+
+The data path from sensor to analysis tool passes through three stages:
+
+\begin{enumerate}
+    \item \textbf{Firmware (Teensy 4.1).}  The ADS1299 signals a data-ready interrupt at 1000\,Hz.  The interrupt handler reads 24~bytes of EEG data over SPI, polls auxiliary sensors according to a scheduling table, assembles a binary packet, and writes it to the USB-serial transmit buffer.
+    \item \textbf{Host application (Open Ephys / Qt).}  A parser thread reads the serial port, synchronizes on the \hexval{A5}\,\hexval{5A} header, extracts fields, verifies the checksum, and pushes samples into a ring buffer.
+    \item \textbf{Lab Streaming Layer (LSL).}  An LSL outlet publishes the parsed EEG data as 32-bit floating-point microvolts and TTL events as string markers, making them available to LabRecorder, MNE-Python, or any other LSL consumer.
+\end{enumerate}
+
+\subsection{Byte Order and Encoding}
+
+All multi-byte fields are transmitted in \textbf{big-endian} (network) order, which matches the native output format of the ADS1299.  This avoids byte-swapping on the firmware side.  The host parser must convert to the platform's native order when reading timestamps and sensor values.
+
+% =============================================================================
+\section{Packet Format}
+\label{sec:packet-format}
+
+Every packet follows a single layout.  The only variable part is an optional auxiliary block whose presence and size are determined by a 3-bit type code.
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=\pktbitwidth, bitheight=3.5em]{32}
+    \bitbox{3}{\small\textbf{SYNC}\\\scriptsize\texttt{A5\,5A}\\\scriptsize 2\,B} &
+    \bitbox{5}{\small\textbf{TIMESTAMP}\\\scriptsize uint32 BE\\\scriptsize 4\,B} &
+    \bitbox{3}{\small\textbf{TYPE}\\\small\textbf{+TTL}\\\scriptsize 1\,B} &
+    \bitbox{14}{\normalsize\textbf{EEG} --- 8 ch $\times$ 3\,B = 24\,B} &
+    \bitbox{4}{\small\textbf{[AUX]}\\\scriptsize 0--6\,B} &
+    \bitbox{3}{\small\textbf{CHK}\\\scriptsize XOR\\\scriptsize 1\,B}
+\end{bytefield}
+\caption{General packet layout.  The AUX block is absent in EEG-only packets.}
+\label{fig:general-packet}
+\end{figure}
+
+\subsection{Sync Word (Bytes 0--1)}
+
+Every packet begins with the two-byte sequence \hexval{A5}\,\hexval{5A}.  This pattern was chosen because it alternates bit polarities (10100101\,01011010), making it unlikely to appear accidentally in EEG or sensor data.  If the parser loses synchronization---for instance after a corrupted packet---it scans the incoming byte stream for this marker to re-align.
+
+Because there is no footer or end-of-packet delimiter, the sync word is the \emph{only} mechanism for finding packet boundaries.  This is sufficient because the parser knows the exact packet length once it reads the type code at byte~6.
+
+\subsection{Timestamp (Bytes 2--5)}
+
+A 32-bit unsigned integer recording the number of microseconds elapsed since the Teensy booted.  At 1000\,Hz, consecutive packets are nominally 1000\,$\mu$s apart.  The timestamp serves two purposes:
+
+\begin{itemize}
+    \item \textbf{Ordering.}  Packets arrive in order over a serial link, but the timestamp makes the ordering explicit and verifiable.
+    \item \textbf{Loss detection.}  If the difference between two consecutive timestamps exceeds approximately 1000\,$\mu$s (plus jitter tolerance), the host knows one or more packets were lost.
+\end{itemize}
+
+There is no separate sequence counter.  The microsecond timestamp provides strictly monotonic ordering and finer-grained gap detection than a simple integer counter would.
+
+\notebox{The 32-bit microsecond counter wraps after roughly 71.6~minutes ($2^{32} / 10^6 / 60$).  Parsers must handle this rollover gracefully.}
+
+\subsection{TYPE+TTL Byte (Byte 6)}
+\label{sec:typettl}
+
+A single byte encodes three pieces of information:
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=2.5em, bitheight=3em]{8}
+    \bitheader{0,1,2,3,4,5,6,7} \\
+    \bitbox{1}{\small\texttt{TTL}\\\texttt{IN}} &
+    \bitbox{1}{\small\texttt{TTL}\\\texttt{OUT}} &
+    \bitbox{3}{\small Reserved\\\small(\texttt{000})} &
+    \bitbox{3}{\small TYPE\\\small(3 bits)}
+\end{bytefield}
+\caption{Bit-field layout of the TYPE+TTL byte.  Bit~7 is the MSB.}
+\label{fig:typettl}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Bits 7--6: TTL lines.}  Bit~7 reflects the state of the external trigger input; bit~6 reflects the trigger output.  These are sampled at the same instant as the EEG data, giving sample-accurate event timing without a separate event channel.
+    \item \textbf{Bits 5--3: Reserved.}  Must be \texttt{000} under normal operation.  When all three are set to \texttt{1}, the packet signals a firmware error (see \cref{sec:error}).
+    \item \textbf{Bits 2--0: Packet type.}  Determines which auxiliary sensor, if any, is included in the packet.
+\end{itemize}
+
+Merging TTL state into the type byte saves one byte per packet compared to a dedicated TTL field.  Over one second of streaming at 1000\,Hz, that is 1000~bytes---a meaningful saving on a serial link.
+
+\subsubsection{Type Codes}
+
+The 3-bit type field supports eight codes.  Five are currently assigned:
+
+\medskip
+\begin{tabular}{cllr}
+\toprule
+\textbf{Code} & \textbf{Name} & \textbf{Auxiliary Payload} & \textbf{Packet Size} \\
+\midrule
+0 & EEG only       & ---                         & 32\,B \\
+1 & EEG + Accel    & 3$\times$ int16 BE (6\,B)   & 38\,B \\
+2 & EEG + PPG      & uint24 BE + uint8 (4\,B)    & 36\,B \\
+3 & EEG + Temp     & int16 BE (2\,B)             & 34\,B \\
+4 & EEG + Battery  & uint8 (1\,B)                & 33\,B \\
+\bottomrule
+\end{tabular}
+\medskip
+
+Codes 5--7 are reserved for future expansion.  A parser encountering an unknown type code should discard the packet and attempt to resynchronize.
+
+\subsubsection{Extracting Fields}
+
+Given the raw byte value, the individual fields are obtained with bit masking:
+
+\begin{align}
+\texttt{ttl\_in}  &= (\texttt{byte} \gg 7) \;\&\; 1  \nonumber\\
+\texttt{ttl\_out} &= (\texttt{byte} \gg 6) \;\&\; 1  \nonumber\\
+\texttt{reserved} &= (\texttt{byte} \gg 3) \;\&\; 7  \nonumber\\
+\texttt{type}     &= \texttt{byte} \;\&\; 7           \nonumber
+\end{align}
+
+\subsection{EEG Data (Bytes 7--30)}
+
+The ADS1299 produces eight channels of 24-bit signed data per conversion cycle.  These 24~bytes are copied directly from the SPI read buffer into the packet with no transformation.  Each channel occupies three bytes in big-endian two's-complement format.
+
+To convert a raw 24-bit value to a voltage in microvolts:
+
+\[
+V_{\mu\text{V}} = \frac{\text{raw}_{24} \times 4.5}{2^{23} \times G} \times 10^{6}
+\]
+
+where $G$ is the programmable gain (typically 24 for EEG).  With gain~24, the least-significant bit corresponds to approximately 0.02235\,$\mu$V.
+
+\notebox{Sign extension is required when unpacking into a 32-bit integer.  If bit~23 of the raw value is set, the upper byte must be filled with \hexval{FF}.}
+
+\subsection{Auxiliary Data (Bytes 31--$n{-}2$)}
+
+If the type code is nonzero, an auxiliary block immediately follows the EEG data.  The block's format depends on the type:
+
+\subsubsection{Accelerometer (Type 1, 6 bytes)}
+
+Three 16-bit signed integers representing the X, Y, and Z axes of an ADXL367 accelerometer.  At the default $\pm$2\,$g$ range and 14-bit resolution, each LSB represents 0.25\,m$g$.  The accelerometer is sampled at 200\,Hz, so this block appears in every 5th packet.
+
+\subsubsection{PPG + SpO\textsubscript{2} (Type 2, 4 bytes)}
+
+A 24-bit unsigned PPG intensity value from the MAXM86161 optical sensor, followed by a single byte representing a firmware-computed SpO\textsubscript{2} estimate (0--100, percent).  PPG data arrives at 100\,Hz (every 10th packet).
+
+\subsubsection{Temperature (Type 3, 2 bytes)}
+
+A 16-bit signed value from the TMP117 digital temperature sensor.  Each LSB equals 0.0078125\,\textdegree C (1/128), giving a resolution of ${\sim}$0.008\,\textdegree C.  Temperature is sampled at 1\,Hz.
+
+\subsubsection{Battery (Type 4, 1 byte)}
+
+A single unsigned byte representing the battery voltage level, read through a voltage divider.  Sampled at 1\,Hz.
+
+\subsection{Checksum (Final Byte)}
+
+The last byte of every packet is the XOR of all preceding bytes (offsets 0 through $n{-}2$):
+
+\[
+\text{checksum} = \bigoplus_{i=0}^{n-2} \text{packet}[i]
+\]
+
+XOR was chosen over CRC for its simplicity and speed on the Teensy's ARM Cortex-M7.  It detects any single-bit error and most multi-bit errors, which is sufficient for a short packet on a reliable USB-serial link.
+
+To verify: XOR all bytes including the checksum.  The result should be zero.
+
+\subsection{Byte Offset Summary}
+
+For quick reference, the absolute byte offsets for each packet type:
+
+\medskip
+\begin{tabular}{lC{1.4cm}C{1.4cm}C{1.4cm}C{1.4cm}C{1.4cm}}
+\toprule
+\textbf{Field} & \textbf{Type 0} & \textbf{Type 1} & \textbf{Type 2} & \textbf{Type 3} & \textbf{Type 4} \\
+& \scriptsize EEG & \scriptsize +Accel & \scriptsize +PPG & \scriptsize +Temp & \scriptsize +Bat \\
+\midrule
+Sync (2\,B)      & 0--1   & 0--1   & 0--1   & 0--1   & 0--1   \\
+Timestamp (4\,B) & 2--5   & 2--5   & 2--5   & 2--5   & 2--5   \\
+Type+TTL (1\,B)  & 6      & 6      & 6      & 6      & 6      \\
+EEG (24\,B)      & 7--30  & 7--30  & 7--30  & 7--30  & 7--30  \\
+Aux data         & ---    & 31--36 & 31--34 & 31--32 & 31     \\
+Checksum (1\,B)  & 31     & 37     & 35     & 33     & 32     \\
+\midrule
+\textbf{Total}   & 32\,B  & 38\,B  & 36\,B  & 34\,B  & 33\,B  \\
+\bottomrule
+\end{tabular}
+\medskip
+
+% =============================================================================
+\section{Sensor Scheduling}
+\label{sec:scheduling}
+
+The EEG front-end generates a data-ready interrupt every millisecond.  Each interrupt produces exactly one packet.  Auxiliary sensors run at lower rates, so most packets carry EEG data alone (type~0).  The scheduling rules determine when each auxiliary sensor gets to attach its data to a packet.
+
+\subsection{Rates and Rationale}
+
+\medskip
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Sensor} & \textbf{Rate} & \textbf{Period} & \textbf{Why} \\
+\midrule
+EEG (+\,TTL)    & 1000\,Hz & 1\,ms     & Neural signals require high temporal resolution \\
+Accelerometer   & 200\,Hz  & 5\,ms     & Head movement artifacts; motion tracking \\
+PPG + SpO$_2$   & 100\,Hz  & 10\,ms    & Cardiac cycle bandwidth (${\sim}$25\,Hz) \\
+Temperature     & 1\,Hz    & 1000\,ms  & Body temperature changes on the order of minutes \\
+Battery         & 1\,Hz    & 1000\,ms  & Voltage changes slowly over hours \\
+\bottomrule
+\end{tabular}
+\medskip
+
+At these rates, approximately 80\% of all packets are EEG-only (type~0), 20\% carry an accelerometer reading, 10\% carry PPG, and temperature and battery each appear once per second.  Because accelerometer and PPG periods share a common multiple (every 10th packet), they collide regularly and require a resolution mechanism.
+
+\subsection{The One-Auxiliary-Per-Packet Rule}
+
+A fundamental constraint of the Compact Protocol is that each packet carries data from \textbf{at most one} auxiliary sensor in addition to EEG.  This keeps the packet format simple---the 3-bit type code unambiguously identifies the payload layout---and avoids large combined packets that would increase worst-case latency.
+
+The trade-off is that when two sensors are due simultaneously, one of them must be delayed.
+
+\subsection{Collision Resolution by Deferral}
+\label{sec:deferral}
+
+When multiple auxiliary sensors are due on the same EEG sample, the firmware applies a fixed priority:
+
+\[
+\text{Accelerometer} \;>\; \text{PPG} \;>\; \text{Temperature} \;>\; \text{Battery}
+\]
+
+The highest-priority sensor claims that packet.  Every other sensor that was due is \textbf{deferred by exactly 1\,ms}---that is, it is sent in the next packet, which corresponds to the next EEG sample.  The deferred packet is a completely normal packet of the appropriate type.  Crucially, it carries the \textbf{fresh EEG sample from the deferred time slot}, not a copy of the previous sample.  No EEG data is ever duplicated or skipped.
+
+\medskip
+\noindent
+\textit{Example.}  At $t = 10$\,ms, both the accelerometer (due every 5\,ms) and PPG (due every 10\,ms) want to send.  The accelerometer wins.  The packet at $t = 10$\,ms is type~1 (EEG + Accel) with EEG data from $t = 10$.  The PPG is deferred to $t = 11$\,ms, producing a type~2 (EEG + PPG) packet with EEG data from $t = 11$.
+
+\medskip
+This approach ensures that the EEG stream remains perfectly regular---one fresh sample per millisecond, every millisecond---regardless of how auxiliary sensors are scheduled.
+
+\subsection{Staggering the 1\,Hz Sensors}
+
+Temperature and Battery both run at 1\,Hz.  If both were due at the same second boundary they would always collide.  To prevent this, they are staggered with a fixed offset so that only one 1\,Hz sensor fires at any given second.
+
+\notebox{The exact staggering offset between Temperature and Battery is not yet finalized in the firmware.  The only firm constraint is that they must not be due on the same sample.  If either 1\,Hz sensor coincides with an accelerometer or PPG packet, the standard deferral rule applies.}
+
+\subsection{What This Means for Parsers}
+
+A parser should not assume that auxiliary data arrives at perfectly regular intervals.  Due to deferral, a PPG reading expected at $t = 10$\,ms may arrive at $t = 11$\,ms.  The correct approach is to use each packet's timestamp to determine when the data was actually sampled, rather than inferring timing from packet sequence position.
+
+% =============================================================================
+\section{Error Handling}
+\label{sec:error}
+
+The protocol provides two error-detection mechanisms and one error-signaling mechanism.
+
+\subsection{Checksum Verification}
+
+The XOR checksum catches transmission errors.  On checksum failure, the host should:
+
+\begin{enumerate}
+    \item Discard the corrupted packet.
+    \item Increment an error counter for diagnostics.
+    \item Continue reading---the next sync word marks the start of the following packet.
+\end{enumerate}
+
+A single checksum failure is not cause for disconnection.  However, a burst of consecutive failures may indicate a hardware problem (loose connection, baud rate mismatch).
+
+\subsection{Sync Loss Recovery}
+
+If the parser encounters bytes that do not form a valid packet---for example, an unexpected byte where a sync word was expected---it must scan forward through the stream, byte by byte, looking for the \hexval{A5}\,\hexval{5A} pattern.  Once found, the parser reads the type byte at offset~6, determines the expected packet length, reads that many bytes, and verifies the checksum.  If the checksum passes, synchronization has been restored.
+
+\notebox{The sync pattern can theoretically appear inside EEG data.  In practice this is extremely rare.  The checksum provides a secondary confirmation that the parser is truly aligned.  If the sync word is found but the checksum fails, the parser should skip that candidate and continue scanning.}
+
+\subsection{Firmware Error Signal}
+\label{sec:error-signal}
+
+When the firmware detects an unrecoverable error (e.g., SPI communication failure with the ADS1299), it sends a special error packet.  This packet has the normal header structure, but the reserved bits (5--3) in the TYPE+TTL byte are all set to \texttt{1}, and the EEG data region is zeroed out:
+
+\begin{center}
+\hexval{A5}\,\hexval{5A} + Timestamp (4\,B) + \textit{error-flagged TYPE+TTL} + 24$\times$\hexval{00} + Checksum
+\end{center}
+
+Any TYPE+TTL byte where $(\texttt{byte} \gg 3) \;\&\; 7 = 7$ is an error signal.  Upon receiving it, the host must:
+
+\begin{enumerate}
+    \item Stop data acquisition.
+    \item Transition back to the handshake / connection state.
+    \item Report the error to the user.
+\end{enumerate}
+
+% =============================================================================
+\section{Bandwidth and Timing}
+\label{sec:bandwidth}
+
+\subsection{Serial Link Budget}
+
+The serial link runs at 2,000,000 baud.  With 8N1 framing (10 bits per byte), the effective byte rate is 200,000\,B/s.  The average data rate depends on the mix of packet types:
+
+\begin{align}
+\text{Average B/s} &\approx 698 \times 32 + 200 \times 38 + 100 \times 36 + 1 \times 34 + 1 \times 33 \nonumber\\
+    &= 22{,}336 + 7{,}600 + 3{,}600 + 34 + 33 \nonumber\\
+    &\approx 33{,}603 \text{\,B/s} \nonumber
+\end{align}
+
+This represents \textbf{16.8\%} of the available bandwidth, leaving 83.2\% headroom.  The generous margin accommodates occasional retransmissions, USB scheduling jitter, and potential future expansion (more channels or higher auxiliary rates).
+
+\subsection{Worst-Case Burst}
+
+The largest packet is 38~bytes (EEG + Accelerometer).  At 200,000~B/s, transmitting one such packet takes 0.19\,ms, well within the 1\,ms inter-sample interval.  Even two back-to-back large packets (e.g., accelerometer at $t$ followed by deferred PPG at $t+1$) total 74~bytes, requiring 0.37\,ms---still comfortably within budget.
+
+\subsection{Overhead Efficiency}
+
+Every packet carries 8~bytes of fixed overhead (2\,B sync + 4\,B timestamp + 1\,B type + 1\,B checksum).  As a fraction of the total packet:
+
+\medskip
+\begin{tabular}{rrrr}
+\toprule
+\textbf{EEG Channels} & \textbf{EEG Data} & \textbf{EEG-Only Packet} & \textbf{Overhead} \\
+\midrule
+5  & 15\,B & 23\,B & 34.8\% \\
+8  & 24\,B & 32\,B & 25.0\% \\
+12 & 36\,B & 44\,B & 18.2\% \\
+16 & 48\,B & 56\,B & 14.3\% \\
+\bottomrule
+\end{tabular}
+\medskip
+
+The 8-byte overhead becomes proportionally cheaper as the channel count increases.  At 8~channels the protocol is already reasonably efficient at 25\%.
+
+% =============================================================================
+\section{Integration with Lab Streaming Layer}
+\label{sec:lsl}
+
+The host application publishes parsed data over Lab Streaming Layer (LSL), which is the standard transport for real-time neural data in research environments.  Two streams are created: an EEG data stream and a marker event stream.
+
+\subsection{EEG Stream}
+
+The EEG stream publishes 32-bit floating-point values in microvolts at a nominal rate of 1000\,Hz.  The conversion from raw 24-bit ADC counts to microvolts happens in the host parser before data enters LSL.
+
+Key stream properties:
+
+\medskip
+\begin{tabular}{lll}
+\toprule
+\textbf{Property} & \textbf{Value} & \textbf{Rationale} \\
+\midrule
+\texttt{name}            & \texttt{"InEarEEG"}       & Human-readable; unique per device \\
+\texttt{type}            & \texttt{"EEG"}             & Recognized by LabRecorder, MNE-Python, EEGLAB \\
+\texttt{channel\_count}  & 8                          & Matches hardware configuration \\
+\texttt{nominal\_srate}  & 1000.0                     & Must match actual firmware rate \\
+\texttt{channel\_format}  & \texttt{cf\_float32}       & Data pushed as microvolts \\
+\texttt{source\_id}      & \texttt{"inear\_001"}      & Stable across sessions; unique per device \\
+\bottomrule
+\end{tabular}
+\medskip
+
+Each channel's XML metadata should include a \texttt{label} (ideally 10--20 system names like Fp1, Cz), a \texttt{unit} of \texttt{"microvolts"} (not \texttt{"uV"}---the spelled-out form is the LSL/XDF convention), and a \texttt{type} of \texttt{"EEG"}.
+
+The \texttt{acquisition} XML block should include \texttt{manufacturer}, \texttt{model}, \texttt{serial\_number}, and a \texttt{scale\_factor} of approximately 0.02235 ($\mu$V per LSB at gain~24).
+
+\subsection{Marker Stream}
+
+TTL events are published on a separate irregular-rate string stream.  This stream uses \texttt{type = "Markers"}, \texttt{nominal\_srate = 0} (irregular), and \texttt{channel\_format = cf\_string}.
+
+Recommended marker strings:
+
+\medskip
+\begin{tabular}{ll}
+\toprule
+\textbf{Event} & \textbf{String} \\
+\midrule
+TTL input rising edge  & \texttt{"TTL\_IN\_1"} \\
+TTL input falling edge & \texttt{"TTL\_IN\_0"} \\
+TTL output rising edge & \texttt{"TTL\_OUT\_1"} \\
+TTL output falling edge & \texttt{"TTL\_OUT\_0"} \\
+\bottomrule
+\end{tabular}
+\medskip
+
+\subsection{Outlet Configuration}
+
+The LSL outlet should use a chunk size of $\lfloor \text{srate} / 20 \rfloor = 50$ samples, which corresponds to approximately 50\,ms of data per push.  This balances latency (small enough for near-real-time feedback) against efficiency (large enough to avoid per-sample overhead).  A \texttt{max\_buffered} value of 360~seconds provides a 6-minute buffer to absorb brief network or processing stalls.
+
+% =============================================================================
+\section{Design Rationale}
+\label{sec:rationale}
+
+This section explains the reasoning behind several non-obvious design choices.
+
+\subsection{Why No Footer?}
+
+Many serial protocols use a footer (e.g., \hexval{C0}\,\hexval{C0}) to mark the end of a packet.  The Compact Protocol omits this because:
+
+\begin{itemize}
+    \item The packet length is fully determined by the 3-bit type code.  Once the parser reads the type, it knows exactly how many bytes to expect.
+    \item Eliminating 2~footer bytes per packet saves 2000~bytes per second at 1000\,Hz---a non-trivial reduction.
+    \item Footer bytes require escaping if the same byte pattern appears in the payload, adding complexity.  The Compact Protocol avoids this entirely.
+\end{itemize}
+
+\subsection{Why No Sequence Counter?}
+
+A sequence counter (typically 1--4 bytes) is common in streaming protocols.  Here, the 4-byte microsecond timestamp already provides:
+
+\begin{itemize}
+    \item Strict monotonic ordering (the same guarantee a counter provides).
+    \item Loss detection with sub-millisecond precision (a counter can only detect that \textit{something} was lost, not \textit{when}).
+    \item Absolute timing information that a counter cannot provide.
+\end{itemize}
+
+Since the timestamp already occupies 4~bytes and satisfies all use cases that a counter would, adding a separate counter would be pure redundancy.
+
+\subsection{Why XOR Instead of CRC?}
+
+XOR is the simplest possible checksum.  It detects any single-bit error but can miss certain multi-bit error patterns (specifically, any even number of errors in the same bit position across bytes).  A CRC-8 or CRC-16 would provide stronger detection.
+
+XOR was chosen because the USB-serial link already has its own CRC at the USB layer, making transport errors extremely rare.  The protocol-level checksum primarily guards against firmware bugs (e.g., a buffer overrun corrupting a packet) rather than transmission errors.  For this purpose, XOR is sufficient and costs only a few CPU cycles.
+
+\subsection{Why Variable-Length Packets?}
+
+An alternative design would use a fixed packet size (e.g., always 38~bytes) with unused auxiliary fields zeroed out.  Variable-length packets were preferred because:
+
+\begin{itemize}
+    \item 80\% of all packets carry no auxiliary data.  Padding each of these with 6~unused bytes would waste $0.8 \times 6 \times 1000 = 4800$~bytes per second.
+    \item Variable-length packets make the type code semantically meaningful: if the type says ``EEG only,'' there is genuinely nothing else in the packet.  This simplifies debugging.
+\end{itemize}
+
+The cost is a slightly more complex parser that must determine packet length from the type code before reading the remainder.
+
+% =============================================================================
+\section{Implementation Notes}
+\label{sec:impl}
+
+\subsection{Parser State Machine}
+
+A robust parser typically uses three states:
+
+\begin{enumerate}
+    \item \textbf{SEEKING\_SYNC.}  Scan bytes one at a time, looking for \hexval{A5} followed by \hexval{5A}.
+    \item \textbf{READING\_HEADER.}  Read the next 5~bytes (timestamp + type).  Determine packet length from the type code.  If the type code is invalid (5--7), return to SEEKING\_SYNC.
+    \item \textbf{READING\_BODY.}  Read the remaining bytes (EEG + optional aux + checksum).  Verify the checksum.  If valid, emit the packet; if invalid, return to SEEKING\_SYNC and scan from the byte after the sync word that failed.
+\end{enumerate}
+
+\subsection{Sign Extension for 24-Bit EEG}
+
+The ADS1299's 24-bit output is signed (two's complement).  When unpacking into a 32-bit integer:
+
+\begin{enumerate}
+    \item Assemble the three bytes: $\text{raw} = (b_0 \ll 16) \;|\; (b_1 \ll 8) \;|\; b_2$.
+    \item Check the sign bit: if $\text{raw} \;\&\; \hexval{800000} \neq 0$, set the upper byte: $\text{raw} \;|\;= \hexval{FF000000}$.
+\end{enumerate}
+
+Failing to sign-extend will cause negative EEG values to be interpreted as large positive numbers, producing obvious artifacts in the signal.
+
+\subsection{Timestamp Rollover}
+
+The 32-bit microsecond timestamp rolls over at $2^{32} - 1 = 4{,}294{,}967{,}295$\,$\mu$s (${\approx}$71.6~minutes).  To compute the interval between two timestamps $t_1$ and $t_2$ (where $t_2$ may have wrapped):
+
+\[
+\Delta t = (t_2 - t_1) \mod 2^{32}
+\]
+
+Standard unsigned subtraction on 32-bit integers handles this automatically in C and most languages.
+
+\subsection{Handling Unknown Type Codes}
+
+If the parser encounters a type code of 5, 6, or 7, it cannot determine the packet length.  The safest response is to discard the current parse attempt and return to SEEKING\_SYNC.  This situation should be logged, as it may indicate firmware/parser version mismatch.
+
+\end{document}
