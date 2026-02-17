@@ -249,9 +249,13 @@ bool ParadigmBridge::startServer(int port)
     bool success = tcpServer->startServer(port);
 
     if (success)
+    {
         LOGC("Paradigm Bridge: TCP server started on port ", port);
+    }
     else
+    {
         LOGC("Paradigm Bridge: Failed to start TCP server on port ", port);
+    }
 
     return success;
 }
