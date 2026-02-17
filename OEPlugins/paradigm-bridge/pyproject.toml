@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paradigm-bridge"
+version = "1.0.0"
+description = "Bridge between experiment paradigm software (PsychoPy, etc.) and Open Ephys GUI — recording control + trigger annotations"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+keywords = ["open-ephys", "psychopy", "eeg", "neuroscience", "triggers", "paradigm", "recording"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "requests>=2.25.0",
+    "pyzmq>=22.0.0",
+]
+
+[project.optional-dependencies]
+gui = []  # tkinter is stdlib, no extra deps needed
+psychopy = ["psychopy"]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+paradigm-bridge-gui = "paradigm_bridge.gui:launch_gui"
+
+[tool.setuptools.packages.find]
+include = ["paradigm_bridge*"]

@@ -1,0 +1,8 @@
+# Paradigm Bridge - Dependencies
+# Install with: pip install -r requirements.txt
+
+requests>=2.25.0     # HTTP communication with Open Ephys GUI
+pyzmq>=22.0.0        # ZMQ communication with Network Events plugin
+
+# Optional: install PsychoPy separately
+# psychopy

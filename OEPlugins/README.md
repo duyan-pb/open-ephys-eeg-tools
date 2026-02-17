@@ -13,6 +13,8 @@ Custom plugins for Open Ephys GUI providing various data sources and processing 
 | **[lab-streaming-layer-io](lab-streaming-layer-io/)** | Mixed | LSL inlet + outlet | ✅ Production |
 | **[custom-ic-source](custom-ic-source/)** | DataThread | IC hardware integration | 🔧 Development |
 | **[openbci-cyton](openbci-cyton/)** | DataThread | OpenBCI Cyton support | 🔧 Development |
+| **[paradigm-bridge](paradigm-bridge/)** | Python Bridge | PsychoPy/paradigm ↔ Open Ephys (recording + triggers) | ✅ Production |
+| **[paradigm-bridge-cpp](paradigm-bridge-cpp/)** | Processor (DLL) | Native C++ paradigm bridge — TCP triggers + recording control | ✅ Production |
 
 ## Quick Build (Windows)
 
@@ -60,6 +62,10 @@ Copy-Item 'lsl-outlet\Build\Release\*.dll' 'C:\Program Files\Open Ephys\plugins\
 - Process data in the signal chain
 - Output to external systems (LSL)
 
+### Python Bridges
+- Connect external Python software to Open Ephys
+- Paradigm integration (PsychoPy, Expyriment)
+
 ## Recommended Signal Chains
 
 ### Basic EEG Recording
@@ -75,6 +81,18 @@ Copy-Item 'lsl-outlet\Build\Release\*.dll' 'C:\Program Files\Open Ephys\plugins\
 ### File Playback
 ```
 [File Reader (EDF)] → [Bandpass Filter] → [LFP Viewer]
+```
+
+### Paradigm with Triggers (Native C++ Plugin)
+```
+[Source] → [Paradigm Bridge] → [Bandpass Filter] → [Record Node] → [LFP Viewer]
+         ↑ TCP port 5557 (PsychoPy / MATLAB / Python scripts)
+```
+
+### Paradigm with Triggers (Python Bridge)
+```
+[Source] → [Network Events] → [Bandpass Filter] → [Record Node] → [LFP Viewer]
+         + ParadigmBridge (PsychoPy → HTTP + ZMQ)
 ```
 
 ## Requirements
