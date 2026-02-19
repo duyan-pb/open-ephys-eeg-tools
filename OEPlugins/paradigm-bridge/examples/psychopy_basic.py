@@ -10,8 +10,15 @@ Requirements:
     pip install paradigm-bridge   (or run from OEPlugins/paradigm-bridge)
 
 Open Ephys Setup:
-    Signal chain must include:
-    [Source] → [Network Events] → [Bandpass Filter] → [Record Node] → [LFP Viewer]
+    Signal chain must include the **Paradigm Bridge** C++ plugin:
+    [Source] → [Paradigm Bridge] → [Bandpass Filter] → [Record Node] → [LFP Viewer]
+
+    The Python script talks to the Paradigm Bridge plugin via TCP (port 5557).
+    No extra dependencies (ZMQ / pyzmq) are needed.
+
+Trigger line assignments (0-based, 0–7):
+    Line 0 = Stimulus onset / offset
+    Line 5 = Experiment start / end
 """
 
 from psychopy import visual, event, core
@@ -22,16 +29,14 @@ import time
 # 1. Connect to Open Ephys
 # ===========================================================================
 
-bridge = ParadigmBridge(
-    enable_triggers=True,  # requires Network Events plugin in signal chain
-    verbose=True,
-)
+bridge = ParadigmBridge(verbose=True)
 
 # Optional: verify connection before starting
 report = bridge.check_signal_chain()
 print(f"Connected: {report['connected']}")
 print(f"Mode: {report['mode']}")
-print(f"Network Events available: {report['has_network_events']}")
+print(f"Trigger backend: {report['trigger_backend']}")
+print(f"Triggers available: {report['triggers_available']}")
 print(f"Processors: {report['processors']}")
 
 # ===========================================================================
@@ -56,7 +61,7 @@ if 'escape' in keys:
 # ===========================================================================
 
 bridge.start_recording("psychopy_basic_demo")
-bridge.experiment_start()  # TTL marker on line 6
+bridge.experiment_start()  # TTL marker on line 5
 
 text_stim.setText('Recording... presenting stimuli')
 text_stim.draw()
@@ -76,9 +81,9 @@ for trial in range(NUM_TRIALS):
     text_stim.draw()
     win.flip()
 
-    bridge.stimulus_on(line=1)           # TTL ON line 1 = stimulus onset
+    bridge.stimulus_on(line=0)           # TTL ON line 0 = stimulus onset
     time.sleep(STIM_DURATION)
-    bridge.stimulus_off(line=1)          # TTL OFF line 1 = stimulus offset
+    bridge.stimulus_off(line=0)          # TTL OFF line 0 = stimulus offset
 
     # --- ITI (blank screen) ---
     win.flip()
@@ -88,7 +93,7 @@ for trial in range(NUM_TRIALS):
 # 5. Stop recording
 # ===========================================================================
 
-bridge.experiment_end()  # TTL marker on line 6
+bridge.experiment_end()  # TTL marker on line 5
 bridge.stop_recording()
 
 text_stim.setText('Done! Recording saved.')

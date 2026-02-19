@@ -3,8 +3,14 @@ Paradigm Bridge — Unified Interface
 ====================================
 
 The main entry point that combines RecordingController (HTTP) and
-TriggerManager (ZMQ/Network Events) into a single, easy-to-use class
-for experiment paradigm integration.
+trigger annotations into a single, easy-to-use class for experiment
+paradigm integration with Open Ephys.
+
+Two trigger backends are supported:
+  - **tcp** (default): Connects to the paradigm-bridge-cpp plugin via
+    plain TCP. No extra plugins or dependencies needed.
+  - **zmq**: Connects to the Network Events plugin via ZMQ. Requires
+    pyzmq and the Network Events plugin installed in the signal chain.
 """
 
 import time
@@ -12,7 +18,7 @@ import logging
 from typing import Optional
 
 from .recorder import RecordingController
-from .trigger import TriggerManager
+from .tcp_trigger import TcpTriggerClient
 
 logger = logging.getLogger(__name__)
 
@@ -21,51 +27,63 @@ class ParadigmBridge:
     """Unified bridge between experiment software and Open Ephys GUI.
 
     Combines recording control (HTTP Server) and trigger annotations
-    (Network Events) into a single object.
+    into a single object. Uses the paradigm-bridge-cpp TCP plugin
+    by default — no extra dependencies or plugins needed.
 
     Parameters
     ----------
-    http_address : str
-        IP address of the Open Ephys GUI (HTTP Server).
+    address : str
+        IP address of the machine running Open Ephys GUI.
     http_port : int
         HTTP Server port (default 37497).
-    zmq_address : str
-        IP address for the Network Events ZMQ socket.
+    tcp_port : int
+        paradigm-bridge-cpp TCP port (default 5557).
+    trigger_backend : str
+        ``"tcp"`` (default) uses paradigm-bridge-cpp plugin.
+        ``"zmq"`` uses Network Events plugin (requires pyzmq).
+        ``None`` or ``"none"`` disables triggers entirely.
     zmq_port : int
-        Network Events ZMQ port (default 5556).
-    enable_triggers : bool
-        If True, connect to Network Events for TTL triggers.
-        Set to False if you only need recording control.
+        Network Events ZMQ port (only used when trigger_backend="zmq").
     verbose : bool
         If True, enable INFO-level logging to console.
 
     Examples
     --------
-    Basic recording control (no triggers):
-
-    >>> bridge = ParadigmBridge(enable_triggers=False)
-    >>> bridge.start_recording("my_experiment")
-    >>> import time; time.sleep(10)
-    >>> bridge.stop_recording()
-
-    Full paradigm with triggers:
+    Default usage (TCP → paradigm-bridge-cpp plugin):
 
     >>> bridge = ParadigmBridge()
-    >>> bridge.start_recording("ERP_oddball")
-    >>> bridge.send_trigger(line=1, state=1)  # stimulus ON
-    >>> bridge.send_trigger(line=1, state=0)  # stimulus OFF
+    >>> bridge.start_recording("my_experiment")
+    >>> bridge.send_trigger(line=0, state=1)   # stimulus ON
+    >>> bridge.send_trigger(line=0, state=0)   # stimulus OFF
     >>> bridge.stop_recording()
     >>> bridge.close()
+
+    Recording only (no triggers):
+
+    >>> bridge = ParadigmBridge(trigger_backend=None)
+    >>> bridge.start_recording("my_experiment")
+
+    Legacy ZMQ mode (requires Network Events plugin + pyzmq):
+
+    >>> bridge = ParadigmBridge(trigger_backend="zmq")
+
+    Backward-compatible constructor (deprecated kwargs still work):
+
+    >>> bridge = ParadigmBridge(enable_triggers=True)  # same as tcp
     """
 
     def __init__(
         self,
-        http_address: str = "127.0.0.1",
+        address: str = "127.0.0.1",
         http_port: int = 37497,
-        zmq_address: str = "127.0.0.1",
+        tcp_port: int = 5557,
+        trigger_backend: str = "tcp",
         zmq_port: int = 5556,
-        enable_triggers: bool = True,
         verbose: bool = False,
+        # ---- backward-compat kwargs (ignored if trigger_backend is set) ----
+        http_address: Optional[str] = None,
+        zmq_address: Optional[str] = None,
+        enable_triggers: Optional[bool] = None,
     ):
         # Configure logging
         if verbose:
@@ -75,25 +93,68 @@ class ParadigmBridge:
                 datefmt="%H:%M:%S",
             )
 
+        # Handle deprecated kwargs
+        resolved_address = http_address or address
+        zmq_addr = zmq_address or address
+
+        # Handle deprecated enable_triggers kwarg
+        if enable_triggers is not None and trigger_backend == "tcp":
+            if not enable_triggers:
+                trigger_backend = None
+
         # Recording controller (always available — built into GUI)
         self.recorder = RecordingController(
-            address=http_address,
+            address=resolved_address,
             port=http_port,
         )
 
-        # Trigger manager (optional — requires Network Events plugin)
-        self.triggers: Optional[TriggerManager] = None
-        if enable_triggers:
+        # Trigger client
+        self._trigger_backend = trigger_backend
+        self._tcp_client: Optional[TcpTriggerClient] = None
+        self._zmq_triggers = None  # TriggerManager (lazy)
+
+        if trigger_backend == "tcp":
             try:
-                self.triggers = TriggerManager(
-                    address=zmq_address,
+                self._tcp_client = TcpTriggerClient(
+                    address=resolved_address,
+                    port=tcp_port,
+                    auto_connect=True,
+                )
+                logger.info(
+                    "Triggers enabled (TCP → paradigm-bridge-cpp on port %d)",
+                    tcp_port,
+                )
+            except ConnectionError as e:
+                logger.warning(
+                    "Could not connect to paradigm-bridge-cpp on port %d: %s. "
+                    "Make sure the plugin is loaded and the server is started.",
+                    tcp_port, e,
+                )
+        elif trigger_backend == "zmq":
+            try:
+                from .trigger import TriggerManager
+                self._zmq_triggers = TriggerManager(
+                    address=zmq_addr,
                     port=zmq_port,
                 )
-                logger.info("Triggers enabled (Network Events on port %d)", zmq_port)
+                logger.info(
+                    "Triggers enabled (ZMQ → Network Events on port %d)",
+                    zmq_port,
+                )
             except ImportError as e:
-                logger.warning("Triggers disabled: %s", e)
+                logger.warning("ZMQ triggers disabled: %s", e)
             except Exception as e:
                 logger.warning("Could not connect to Network Events: %s", e)
+        elif trigger_backend is None or trigger_backend == "none":
+            logger.info("Triggers disabled")
+        else:
+            raise ValueError(
+                f"Unknown trigger_backend={trigger_backend!r}. "
+                f"Use 'tcp', 'zmq', or None."
+            )
+
+        # Backward-compat alias
+        self.triggers = self._zmq_triggers
 
     # ------------------------------------------------------------------
     # Connection
@@ -122,15 +183,15 @@ class ParadigmBridge:
             Status report with keys:
             - 'connected': bool
             - 'mode': str
-            - 'has_network_events': bool
+            - 'trigger_backend': str or None
             - 'triggers_available': bool
             - 'processors': list
         """
         report = {
             "connected": False,
             "mode": "UNKNOWN",
-            "has_network_events": False,
-            "triggers_available": self.triggers is not None,
+            "trigger_backend": self._trigger_backend,
+            "triggers_available": self._has_triggers(),
             "processors": [],
         }
         try:
@@ -140,10 +201,17 @@ class ParadigmBridge:
                 report["processors"] = [
                     p.get("name", "?") for p in self.recorder.get_processors()
                 ]
-                report["has_network_events"] = self.recorder.has_network_events()
         except Exception as e:
             logger.warning("Signal chain check failed: %s", e)
         return report
+
+    def _has_triggers(self) -> bool:
+        """Return True if any trigger backend is available."""
+        if self._tcp_client is not None and self._tcp_client.is_connected():
+            return True
+        if self._zmq_triggers is not None:
+            return True
+        return False
 
     # ------------------------------------------------------------------
     # Recording control (delegates to RecordingController)
@@ -184,34 +252,44 @@ class ParadigmBridge:
         self.recorder.set_recording_directory(path)
 
     # ------------------------------------------------------------------
-    # Trigger annotations (delegates to TriggerManager)
+    # Trigger annotations (dispatches to TCP or ZMQ backend)
     # ------------------------------------------------------------------
 
-    def send_trigger(self, line: int = 1, state: int = 1) -> Optional[str]:
+    def send_trigger(self, line: int = 0, state: int = 1) -> Optional[str]:
         """Send a TTL trigger event.
 
         Parameters
         ----------
         line : int
-            TTL line number (1–256).
+            TTL line number. TCP backend: 0–7. ZMQ backend: 1–256.
         state : int
             1 for ON, 0 for OFF.
 
         Returns
         -------
         str or None
-            Response from Network Events, or None if triggers are disabled.
+            Server response, or None if triggers are disabled.
         """
-        if self.triggers is None:
-            logger.warning(
-                "Trigger ignored (triggers not enabled). "
-                "Pass enable_triggers=True and ensure Network Events plugin "
-                "is in the signal chain."
-            )
-            return None
-        return self.triggers.send(line=line, state=state)
+        # TCP backend (paradigm-bridge-cpp)
+        if self._tcp_client is not None:
+            try:
+                return self._tcp_client.send_trigger(line=line, state=state)
+            except ConnectionError as e:
+                logger.warning("TCP trigger failed: %s", e)
+                return None
 
-    def trigger_pulse(self, line: int = 1, duration_ms: float = 5.0):
+        # ZMQ backend (Network Events)
+        if self._zmq_triggers is not None:
+            return self._zmq_triggers.send(line=line, state=state)
+
+        logger.warning(
+            "Trigger ignored (no trigger backend connected). "
+            "Use trigger_backend='tcp' and start the plugin server, "
+            "or trigger_backend='zmq' with Network Events plugin."
+        )
+        return None
+
+    def trigger_pulse(self, line: int = 0, duration_ms: float = 5.0):
         """Send a brief ON/OFF pulse on a TTL line.
 
         Parameters
@@ -221,37 +299,47 @@ class ParadigmBridge:
         duration_ms : float
             Pulse duration in milliseconds (default 5 ms).
         """
-        if self.triggers is None:
-            logger.warning("Trigger pulse ignored (triggers not enabled).")
-            return
-        self.triggers.pulse(line=line, duration_ms=duration_ms)
+        # TCP backend
+        if self._tcp_client is not None:
+            try:
+                self._tcp_client.pulse(line=line, duration_ms=duration_ms)
+                return
+            except ConnectionError as e:
+                logger.warning("TCP trigger pulse failed: %s", e)
+                return
 
-    def stimulus_on(self, line: int = 1):
+        # ZMQ backend
+        if self._zmq_triggers is not None:
+            self._zmq_triggers.pulse(line=line, duration_ms=duration_ms)
+            return
+
+        logger.warning("Trigger pulse ignored (no trigger backend connected).")
+
+    def stimulus_on(self, line: int = 0):
         """Mark stimulus onset."""
         self.send_trigger(line=line, state=1)
 
-    def stimulus_off(self, line: int = 1):
+    def stimulus_off(self, line: int = 0):
         """Mark stimulus offset."""
         self.send_trigger(line=line, state=0)
 
-    def response(self, line: int = 3):
+    def response(self, line: int = 2):
         """Mark a participant response."""
-        if self.triggers:
-            self.triggers.response(line=line)
+        self.trigger_pulse(line=line, duration_ms=5.0)
 
-    def block_start(self, line: int = 5):
+    def block_start(self, line: int = 4):
         """Mark block start."""
         self.send_trigger(line=line, state=1)
 
-    def block_end(self, line: int = 5):
+    def block_end(self, line: int = 4):
         """Mark block end."""
         self.send_trigger(line=line, state=0)
 
-    def experiment_start(self, line: int = 6):
+    def experiment_start(self, line: int = 5):
         """Mark experiment start."""
         self.send_trigger(line=line, state=1)
 
-    def experiment_end(self, line: int = 6):
+    def experiment_end(self, line: int = 5):
         """Mark experiment end."""
         self.send_trigger(line=line, state=0)
 
@@ -263,7 +351,7 @@ class ParadigmBridge:
         self,
         trial_func,
         trial_number: int = 0,
-        trigger_line: int = 1,
+        trigger_line: int = 0,
         log_triggers: bool = True,
     ):
         """Execute a single trial with automatic trigger bracketing.
@@ -298,8 +386,10 @@ class ParadigmBridge:
 
     def close(self):
         """Clean up connections."""
-        if self.triggers is not None:
-            self.triggers.close()
+        if self._tcp_client is not None:
+            self._tcp_client.close()
+        if self._zmq_triggers is not None:
+            self._zmq_triggers.close()
         logger.info("ParadigmBridge closed")
 
     def __enter__(self):
