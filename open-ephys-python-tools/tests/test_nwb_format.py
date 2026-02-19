@@ -29,7 +29,7 @@ def nwb_recording_correct_continuous_metadata():
         stream_name="example_data",
         sample_rate=40000.0,
         num_channels=16,
-        channel_names=None,  # NwbFormat does not yet have channel name reconstruction
+        channel_names=[f"CH{i}" for i in range(1, 17)],
         bit_volts=[0.05] * 16,
     )
 
@@ -39,7 +39,7 @@ def nwb_recording_correct_spike_metadata():
     return SpikeMetadata(
         name="Stereotrode 1",
         stream_name="example_data",
-        sample_rate=None,
+        sample_rate=40000.0,
         num_channels=2,
     )
 
@@ -80,6 +80,12 @@ def test_continuous_data(
     cont = recording_with_continuous_data.continuous[0]
     assert cont.metadata == nwb_recording_correct_continuous_metadata
 
+    samples = cont.get_samples(0, 10)
+    assert samples.shape == (10, 16)
+
+    subset = cont.get_samples(0, 10, selected_channel_names=["CH1", "CH2"])
+    assert subset.shape == (10, 2)
+
 
 def test_spike_data(
     nwb_recording_with_spike_data: NwbRecording,
@@ -118,14 +124,10 @@ def test_events(nwb_recording_with_spike_data: NwbRecording):
 
 
 def test_messages(nwb_recording_with_spike_data: NwbRecording):
-
-    with pytest.raises(NotImplementedError):
-        assert nwb_recording_with_spike_data.messages is not None
-
-    # messages = nwb_recording_with_spike_data.messages
-    # assert len(messages) > 0
-    # assert isinstance(messages, pandas.DataFrame)
-    # expected_columns = ["sample_number", "timestamp", "message"]
-    # assert list(messages.columns) == expected_columns
-    # nMessages = 14
-    # assert len(messages) == nMessages
+    messages = nwb_recording_with_spike_data.messages
+    assert len(messages) > 0
+    assert isinstance(messages, pandas.DataFrame)
+    expected_columns = ["sample_number", "timestamp", "message"]
+    assert list(messages.columns) == expected_columns
+    nMessages = 14
+    assert len(messages) == nMessages

@@ -25,7 +25,6 @@ endif()
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
     OEPLUGIN
     "$<$<PLATFORM_ID:Windows>:JUCE_API=__declspec(dllimport)>"
-    $<$<PLATFORM_ID:Windows>:_CRT_SECURE_NO_WARNINGS>
     $<$<PLATFORM_ID:Linux>:JUCE_DISABLE_NATIVE_FILECHOOSERS=1>
     $<$<CONFIG:Debug>:DEBUG=1>
     $<$<CONFIG:Debug>:_DEBUG=1>
@@ -62,7 +61,7 @@ endif()
 # Libraries and compiler options
 if(MSVC)
     target_link_libraries(${PLUGIN_NAME} ${GUI_BIN_DIR}/open-ephys.lib)
-    target_compile_options(${PLUGIN_NAME} PRIVATE /sdl- /W0)
+    target_compile_options(${PLUGIN_NAME} PRIVATE /sdl /W3 /wd4996)
     
     install(TARGETS ${PLUGIN_NAME} RUNTIME DESTINATION ${GUI_BIN_DIR}/plugins CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
     install(FILES $<TARGET_PDB_FILE:${PLUGIN_NAME}> DESTINATION ${GUI_BIN_DIR}/plugins OPTIONAL)

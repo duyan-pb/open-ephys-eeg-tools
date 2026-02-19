@@ -9,15 +9,54 @@
 #include "ParadigmBridge.h"
 #include "ParadigmBridgeEditor.h"
 
+#include <algorithm>
+#include <cstdlib>
+#include <vector>
+
+namespace
+{
+bool getBoolEnv(const char* name, bool defaultValue)
+{
+    if (const char* value = std::getenv(name))
+    {
+        const String text(value);
+        return text.equalsIgnoreCase("1")
+            || text.equalsIgnoreCase("true")
+            || text.equalsIgnoreCase("yes")
+            || text.equalsIgnoreCase("on");
+    }
+
+    return defaultValue;
+}
+
+String getStringEnv(const char* name)
+{
+    if (const char* value = std::getenv(name))
+        return String(value).trim();
+
+    return {};
+}
+} // namespace
+
 
 ParadigmBridge::ParadigmBridge()
     : GenericProcessor("Paradigm Bridge"),
       acquisitionActive(false),
       triggerCount(0),
+      droppedTriggerCount(0),
       serverPort(5557),
-      autoStartServer(true)
+      autoStartServer(true),
+      allowRemoteConnections(getBoolEnv("PARADIGM_BRIDGE_ALLOW_REMOTE", false))
 {
     tcpServer = std::make_unique<TcpCommandServer>(this);
+    tcpServer->setAllowRemoteConnections(allowRemoteConnections);
+    tcpServer->setRequiredAuthToken(getStringEnv("PARADIGM_BRIDGE_TOKEN"));
+
+    if (allowRemoteConnections)
+        LOGC("Paradigm Bridge: Remote TCP connections ENABLED");
+
+    if (!getStringEnv("PARADIGM_BRIDGE_TOKEN").isEmpty())
+        LOGC("Paradigm Bridge: TCP command authentication ENABLED");
 }
 
 
@@ -49,6 +88,11 @@ void ParadigmBridge::registerParameters()
         "auto_start", "Auto Start",
         "Automatically start TCP server when acquisition begins",
         autoStartServer);
+
+    addBooleanParameter(Parameter::GLOBAL_SCOPE,
+        "allow_remote", "Allow Remote",
+        "Allow TCP connections from non-localhost clients",
+        allowRemoteConnections);
 }
 
 
@@ -64,6 +108,11 @@ void ParadigmBridge::parameterValueChanged(Parameter* param)
     {
         autoStartServer = (bool)param->getValue();
     }
+    else if (param->getName() == "allow_remote")
+    {
+        allowRemoteConnections = (bool)param->getValue();
+        tcpServer->setAllowRemoteConnections(allowRemoteConnections);
+    }
 }
 
 
@@ -78,25 +127,35 @@ void ParadigmBridge::updateSettings()
 
 void ParadigmBridge::process(AudioBuffer<float>& buffer)
 {
-    // Dequeue pending triggers from the TCP server thread and
-    // inject them as TTL events into the signal chain.
+    juce::ignoreUnused(buffer);
+
+    // Dequeue bounded batches from the TCP thread queue and inject in
+    // this process block. Batching prevents unbounded audio-thread work.
+    std::vector<PendingTrigger> triggersToProcess;
     {
         const ScopedLock sl(triggerLock);
 
-        if (!pendingTriggers.empty() && getDataStreams().size() > 0)
-        {
-            for (const auto& trigger : pendingTriggers)
-            {
-                // sampleIndex=0 places the event at the start of this buffer block.
-                // setTTLState() creates a TTLEvent and adds it via addEvent().
-                setTTLState(0, trigger.line, trigger.state);
-            }
-        }
+        const size_t triggerBatchSize =
+            std::min(pendingTriggers.size(), kMaxTriggersPerProcessBlock);
+        triggersToProcess.reserve(triggerBatchSize);
 
-        pendingTriggers.clear();
+        for (size_t i = 0; i < triggerBatchSize; ++i)
+        {
+            triggersToProcess.push_back(pendingTriggers.front());
+            pendingTriggers.pop_front();
+        }
     }
 
-    // All continuous data passes through unchanged (filter processor).
+    if (!triggersToProcess.empty() && getDataStreams().size() > 0
+        && getEventChannels().size() > 0)
+    {
+        for (const auto& trigger : triggersToProcess)
+        {
+            // sampleIndex=0 places the event at the start of this buffer block.
+            // setTTLState() creates a TTLEvent and adds it via addEvent().
+            setTTLState(0, trigger.line, trigger.state);
+        }
+    }
 }
 
 
@@ -104,6 +163,7 @@ bool ParadigmBridge::startAcquisition()
 {
     acquisitionActive = true;
     triggerCount = 0;
+    droppedTriggerCount = 0;
 
     // Clear any stale triggers from before acquisition
     {
@@ -150,6 +210,12 @@ void ParadigmBridge::triggerReceived(int line, bool state)
     if (acquisitionActive.load())
     {
         const ScopedLock sl(triggerLock);
+        if (pendingTriggers.size() >= kMaxPendingTriggers)
+        {
+            droppedTriggerCount++;
+            return;
+        }
+
         pendingTriggers.push_back({ line, state });
         triggerCount++;
     }
@@ -225,11 +291,20 @@ void ParadigmBridge::statusMessageReceived(const String& text)
 
 String ParadigmBridge::getStatusString()
 {
+    // Note: this may be called from the TCP background thread.
+    // Only use thread-safe atomics here; avoid CoreServices calls
+    // which require the message thread.
     String status;
     status += "ACQUISITION=" + String(acquisitionActive.load() ? "ON" : "OFF");
-    status += " RECORDING=" + String(CoreServices::getRecordingStatus() ? "ON" : "OFF");
     status += " TRIGGERS=" + String(triggerCount.load());
+    status += " DROPPED=" + String(droppedTriggerCount.load());
+    status += " REMOTE=" + String(allowRemoteConnections ? "ON" : "OFF");
     return status;
+}
+
+bool ParadigmBridge::isAcquisitionActiveForCommands() const
+{
+    return acquisitionActive.load();
 }
 
 

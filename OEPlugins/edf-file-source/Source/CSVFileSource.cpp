@@ -348,6 +348,8 @@ void CSVFileSource::updateActiveRecord(int index)
 
 void CSVFileSource::seekTo(int64 sampleNumber)
 {
+    if (numSamples <= 0)
+        return;
     if (sampleNumber < 0)
         sampleNumber = 0;
     if (sampleNumber >= numSamples)

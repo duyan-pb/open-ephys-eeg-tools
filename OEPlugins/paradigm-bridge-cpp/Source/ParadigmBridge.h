@@ -26,7 +26,7 @@
 #include <ProcessorHeaders.h>
 #include "TcpCommandServer.h"
 
-#include <vector>
+#include <deque>
 #include <atomic>
 
 /**
@@ -81,6 +81,7 @@ public:
     void newRecordingDirReceived() override;
     void statusMessageReceived(const String& text) override;
     String getStatusString() override;
+    bool isAcquisitionActiveForCommands() const override;
 
 
     // === Public API for editor ===
@@ -137,13 +138,18 @@ private:
 
     // Thread-safe trigger queue (TCP thread → audio thread)
     CriticalSection triggerLock;
-    std::vector<PendingTrigger> pendingTriggers;
+    std::deque<PendingTrigger> pendingTriggers;
 
     // State
     std::atomic<bool> acquisitionActive;
     std::atomic<int> triggerCount;
+    std::atomic<int> droppedTriggerCount;
     int serverPort;
     bool autoStartServer;
+    bool allowRemoteConnections;
+
+    static constexpr size_t kMaxPendingTriggers = 4096;
+    static constexpr size_t kMaxTriggersPerProcessBlock = 128;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ParadigmBridge);
 };

@@ -67,15 +67,26 @@ A **native C++ Open Ephys processor plugin** that bridges external paradigm soft
 ### Connection
 
 ```
-Host: localhost (or remote IP)
+Host: localhost by default (remote clients are blocked unless explicitly enabled)
 Port: 5557 (default, configurable)
 Format: Newline-terminated UTF-8 text commands
 ```
+
+Security defaults:
+
+- Remote clients are **disabled by default** (loopback-only).
+- Optional command authentication via `AUTH <token>`.
+
+Runtime environment variables:
+
+- `PARADIGM_BRIDGE_ALLOW_REMOTE=1` to allow non-localhost clients.
+- `PARADIGM_BRIDGE_TOKEN=<secret>` to require authentication.
 
 ### Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
+| `AUTH <token>` | Authenticate current TCP session (required if token is configured) | `AUTH my-secret` |
 | `TRIGGER <line> <state>` | Send TTL event (line 0-7, state 0 or 1) | `TRIGGER 0 1` |
 | `RECORD START` | Start recording (acquisition must be active) | `RECORD START` |
 | `RECORD STOP` | Stop recording | `RECORD STOP` |
@@ -91,9 +102,12 @@ Format: Newline-terminated UTF-8 text commands
 All commands receive a newline-terminated response:
 
 ```
-OK [data]           — Command succeeded
+OK [data]           — Command accepted
 ERROR <message>     — Command failed
 ```
+
+For recording and directory commands, `OK ... ACCEPTED` means the command was accepted
+and dispatched to the GUI thread.
 
 **Examples:**
 ```
@@ -103,8 +117,11 @@ ERROR <message>     — Command failed
 → TRIGGER 0 1
 ← OK TRIGGER 0 1
 
+→ AUTH my-secret
+← OK AUTH
+
 → STATUS
-← OK ACQUISITION=ON RECORDING=OFF TRIGGERS=42
+← OK ACQUISITION=ON RECORDING=OFF TRIGGERS=42 DROPPED=0 REMOTE=OFF
 
 → TRIGGER 8 1
 ← ERROR line must be 0-7
@@ -165,6 +182,20 @@ After building, the plugin DLL/SO/bundle is automatically installed into the Ope
 4. **Connect client**: From your paradigm script, connect via TCP to `localhost:5557`.
 
 5. **Send commands**: Use newline-terminated text commands.
+
+## Integration Tests
+
+An optional pytest integration suite is provided in `tests/test_tcp_protocol.py`.
+It validates command/response behavior against a running plugin instance.
+
+```bash
+pip install pytest
+export PARADIGM_BRIDGE_TEST_HOST=127.0.0.1
+export PARADIGM_BRIDGE_TEST_PORT=5557
+# Optional if authentication is enabled:
+export PARADIGM_BRIDGE_TEST_TOKEN=your-token
+pytest tests/test_tcp_protocol.py -q
+```
 
 ## Python Client Examples
 

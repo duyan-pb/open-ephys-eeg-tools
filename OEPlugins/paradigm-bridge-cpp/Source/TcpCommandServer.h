@@ -31,6 +31,7 @@
 #define TCP_COMMAND_SERVER_H_DEFINED
 
 #include <JuceHeader.h>
+#include <atomic>
 
 /**
  * Listener interface for receiving parsed commands from the TCP server.
@@ -64,6 +65,9 @@ public:
 
     /** Called when STATUS is received - return current status string */
     virtual String getStatusString() = 0;
+
+    /** Returns whether acquisition is active (used for preflight checks). */
+    virtual bool isAcquisitionActiveForCommands() const = 0;
 };
 
 
@@ -99,10 +103,25 @@ public:
     /** Returns the last command string received (thread-safe copy). */
     String getLastCommand() const;
 
+    /** Restrict accepted connections to loopback only unless enabled. */
+    void setAllowRemoteConnections(bool allow) { allowRemoteConnections.store(allow); }
+
+    /** Require AUTH <token> before processing privileged commands. */
+    void setRequiredAuthToken(const String& token);
+
 private:
+    struct ClientSessionState
+    {
+        bool authenticated = false;
+    };
+
     void run() override;
     void handleClient(StreamingSocket* client);
-    String processCommand(const String& command);
+    String processCommand(const String& command, ClientSessionState& session);
+    static bool tryParseIntStrict(const String& text, int& valueOut);
+    static bool isLoopbackHost(const String& host);
+    static String getCommandPreview(const String& command);
+    String getRequiredAuthToken() const;
 
     TcpCommandListener* listener;
     StreamingSocket serverSocket;
@@ -110,9 +129,15 @@ private:
     std::atomic<bool> serverRunning;
     std::atomic<bool> clientConnected;
     std::atomic<int> commandCount;
+    std::atomic<bool> allowRemoteConnections;
 
     CriticalSection lastCommandLock;
     String lastCommand;
+    mutable CriticalSection authTokenLock;
+    String requiredAuthToken;
+
+    static constexpr int kMaxCommandBytes = 1024;
+    static constexpr int kMaxBufferedBytes = 8192;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TcpCommandServer);
 };

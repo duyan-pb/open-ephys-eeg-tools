@@ -42,11 +42,16 @@ from open_ephys.analysis.recording import (
 
 class NwbSpikes(Spikes):
     def __init__(self, nwb: h5.File, dataset: str):
+        interval = nwb["acquisition"][dataset]["timestamps"].attrs.get("interval", None)
+        sample_rate = None
+        if interval is not None and interval > 0:
+            sample_rate = np.around(1 / float(interval), 1)
+
         self.metadata = SpikeMetadata(
             name=dataset.split(".")[-1],
             stream_name=dataset.split(".")[-2],
             num_channels=nwb["acquisition"][dataset]["data"][()].shape[1],
-            sample_rate=None,  # FIXME:
+            sample_rate=sample_rate,
         )
 
         self.timestamps = nwb["acquisition"][dataset]["timestamps"][()]
@@ -64,6 +69,15 @@ class NwbContinuous(Continuous):
         source_node_id = int(source_node[-3:])
         source_node_name = source_node[:-4]
 
+        num_channels = nwb["acquisition"][dataset]["data"].shape[1]
+        channel_names = [f"CH{i + 1}" for i in range(num_channels)]
+
+        electrodes = nwb["acquisition"][dataset].get("electrodes")
+        if electrodes is not None:
+            electrode_ids = electrodes[()]
+            if len(electrode_ids) == num_channels:
+                channel_names = [f"CH{int(channel_id) + 1}" for channel_id in electrode_ids]
+
         self.metadata = ContinuousMetadata(
             source_node_id=source_node_id,
             source_node_name=source_node_name,
@@ -71,9 +85,9 @@ class NwbContinuous(Continuous):
             sample_rate=np.around(
                 1 / nwb["acquisition"][dataset]["timestamps"].attrs["interval"], 1
             ),
-            num_channels=nwb["acquisition"][dataset]["data"].shape[1],
+            num_channels=num_channels,
             bit_volts=list(nwb["acquisition"][dataset]["channel_conversion"][()] * 1e6),
-            channel_names=None,  # TODO: add this
+            channel_names=channel_names,
         )
         self.samples = nwb["acquisition"][dataset]["data"]
         self.sample_numbers = nwb["acquisition"][dataset]["sync"]
@@ -116,6 +130,9 @@ class NwbContinuous(Continuous):
                 "Cannot specify both `selected_channels`"
                 + " and `selected_channel_names` as input arguments"
             )
+
+        if selected_channels is None and selected_channel_names is None:
+            selected_channels = np.arange(self.metadata.num_channels, dtype=np.uint32)
 
         if selected_channel_names:
             selected_channels = [
@@ -234,9 +251,40 @@ class NwbRecording(Recording):
         )
 
     def load_messages(self):
-        raise NotImplementedError(
-            "Loading messages from NWB2 format is noy yet implemented."
-        )
+        datasets = list(self.nwb["acquisition"].keys())
+
+        frames = []
+
+        for dataset in datasets:
+            if dataset != "messages":
+                continue
+
+            ds = self.nwb["acquisition"][dataset]
+            if ds.attrs.get("neurodata_type", "") != "AnnotationSeries":
+                continue
+
+            raw_messages = ds["data"][()]
+            messages = [
+                msg.decode("utf-8") if isinstance(msg, (bytes, np.bytes_)) else str(msg)
+                for msg in raw_messages
+            ]
+
+            frames.append(
+                pd.DataFrame(
+                    data={
+                        "sample_number": ds["sync"][()],
+                        "timestamp": ds["timestamps"][()],
+                        "message": messages,
+                    }
+                )
+            )
+
+        if len(frames) > 0:
+            self._messages = pd.concat(frames).sort_values(
+                by=["sample_number"], ignore_index=True
+            )
+        else:
+            self._messages = None
 
     def __str__(self):
         """Returns a string with information about the Recording"""

@@ -296,7 +296,7 @@ void LSLInletThread::readMarkers (std::size_t samples_to_read)
 
             // try to find closest event timestamp among sample timestamps
             bool found_match = false;
-            for (int j = i; samples_to_read; j++)
+            for (int j = i; j < samples_to_read; j++)
             {
                 if (timestampBuffer[j] >= ts)
                 {
@@ -367,6 +367,15 @@ bool LSLInletThread::startAcquisition()
         LOGE ("Failed to allocate data buffer");
         return false;
     }
+    if (auto newBuffer = (float*) realloc (samples, numChannels * numSamples * sizeof (float)))
+    {
+        samples = newBuffer;
+    }
+    else
+    {
+        LOGE ("Failed to allocate samples buffer");
+        return false;
+    }
     if (auto newBuffer = (double*) realloc (timestampBuffer, numSamples * sizeof (double)))
     {
         timestampBuffer = newBuffer;
@@ -405,8 +414,11 @@ bool LSLInletThread::startAcquisition()
     if (markerStreams.size())
     {
         int selectedMarkerStream = ((SelectedStreamParameter*) (getParameter ("marker_stream")))->getSelectedIndex();
-        this->markersStream = new lsl::stream_inlet (markerStreams[selectedMarkerStream]);
-        jassert (this->markersStream->get_channel_count() == 1);
+        if (selectedMarkerStream >= 0 && selectedMarkerStream < (int) markerStreams.size())
+        {
+            this->markersStream = new lsl::stream_inlet (markerStreams[selectedMarkerStream]);
+            jassert (this->markersStream->get_channel_count() == 1);
+        }
     }
 
     startThread();
@@ -420,11 +432,8 @@ bool LSLInletThread::stopAcquisition()
         signalThreadShouldExit();
     }
 
-    if (MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        // if we are on the message thread, we can wait for the thread to exit immediately
-        stopThread (500);
-    }
+    // Always wait for the thread to fully stop before deleting streams
+    stopThread (1000);
 
     if (this->dataStream != NULL)
     {
@@ -458,6 +467,11 @@ void LSLInletThread::updateSettings (OwnedArray<ContinuousChannel>* continuousCh
     sourceStreams->clear();
 
     if (dataStreams.empty())
+    {
+        return;
+    }
+
+    if (selectedDataStream < 0 || selectedDataStream >= (int) dataStreams.size())
     {
         return;
     }

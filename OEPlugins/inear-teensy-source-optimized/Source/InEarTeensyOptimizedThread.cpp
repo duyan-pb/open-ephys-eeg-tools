@@ -352,6 +352,8 @@ void OptimizedProtocolParser::reset()
 
 int OptimizedProtocolParser::findSyncPosition()
 {
+    if (buffer.size() < 2)
+        return -1;
     for (size_t i = 0; i < buffer.size() - 1; i++)
     {
         if (buffer[i] == SYNC_BYTE_1 && buffer[i + 1] == SYNC_BYTE_2)

@@ -393,6 +393,8 @@ void EDFFileSource::updateActiveRecord(int index)
 
 void EDFFileSource::seekTo(int64 sampleNumber)
 {
+    if (totalSamples <= 0)
+        return;
     if (sampleNumber < 0)
         sampleNumber = 0;
     if (sampleNumber >= totalSamples)

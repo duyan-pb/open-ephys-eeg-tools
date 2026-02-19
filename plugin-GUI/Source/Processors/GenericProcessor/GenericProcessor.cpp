@@ -1460,6 +1460,9 @@ void GenericProcessor::flipTTLState (int sampleIndex, int lineIndex)
     if (lineIndex < 0 || lineIndex >= 8)
         return;
 
+    if (ttlEventChannel == nullptr)
+        return;
+
     bool currentState = ttlLineStates[lineIndex];
     ttlLineStates.set (lineIndex, ! currentState);
 
@@ -1473,6 +1476,9 @@ void GenericProcessor::flipTTLState (int sampleIndex, int lineIndex)
 void GenericProcessor::setTTLState (int sampleIndex, int lineIndex, bool state)
 {
     if (lineIndex < 0 || lineIndex >= 8)
+        return;
+
+    if (ttlEventChannel == nullptr)
         return;
 
     ttlLineStates.set (lineIndex, state);
