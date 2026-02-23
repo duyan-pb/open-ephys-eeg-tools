@@ -118,10 +118,34 @@ void ParadigmBridge::parameterValueChanged(Parameter* param)
 
 void ParadigmBridge::updateSettings()
 {
-    // Create a TTL event channel with 8 lines for trigger injection.
-    // Uses the simplified GenericProcessor helper which creates an
-    // EventChannel on the first available data stream.
-    addTTLChannel("Paradigm Bridge TTL");
+    // -----------------------------------------------------------------
+    // Create a TTL event channel MANUALLY instead of using the base-class
+    // addTTLChannel() helper.  The stock Open Ephys GUI (including v1.0.2)
+    // has a bug in addTTLChannel(): it does NOT call addProcessor(this) on
+    // the new EventChannel, leaving sourceNodeId at -1 (0xFFFF as uint16).
+    // When downstream processors (Record Node, LFP Viewer) later try to
+    // deserialize the TTL events the lookup fails, deserialize() returns
+    // nullptr, and the RecordNode crashes dereferencing a null TTLEventPtr.
+    //
+    // By creating the EventChannel ourselves and calling addProcessor(this)
+    // we guarantee correct sourceNodeId on ANY stock Open Ephys build.
+    // -----------------------------------------------------------------
+    localTtlChannel = nullptr;   // cleared by update() → clearSettings()
+
+    if (dataStreams.size() > 0)
+    {
+        EventChannel::Settings settings {
+            EventChannel::Type::TTL,
+            "Paradigm Bridge TTL",
+            "TTL events injected by the Paradigm Bridge plugin",
+            "paradigm_bridge.ttl.events",
+            dataStreams[0]
+        };
+
+        eventChannels.add(new EventChannel(settings));
+        localTtlChannel = eventChannels.getLast();
+        localTtlChannel->addProcessor(this);         // <-- THE CRITICAL FIX
+    }
 }
 
 
@@ -146,14 +170,19 @@ void ParadigmBridge::process(AudioBuffer<float>& buffer)
         }
     }
 
-    if (!triggersToProcess.empty() && getDataStreams().size() > 0
-        && getEventChannels().size() > 0)
+    if (!triggersToProcess.empty() && localTtlChannel != nullptr)
     {
+        const int64 startSample =
+            getFirstSampleNumberForBlock(localTtlChannel->getStreamId());
+
         for (const auto& trigger : triggersToProcess)
         {
-            // sampleIndex=0 places the event at the start of this buffer block.
-            // setTTLState() creates a TTLEvent and adds it via addEvent().
-            setTTLState(0, trigger.line, trigger.state);
+            // Create the TTL event directly on our properly-initialised
+            // channel (bypasses the stock setTTLState() which relies on
+            // the buggy private ttlEventChannel member).
+            TTLEventPtr event = TTLEvent::createTTLEvent(
+                localTtlChannel, startSample, trigger.line, trigger.state);
+            addEvent(event, 0);
         }
     }
 }
