@@ -111,13 +111,24 @@ class MockParadigmBridgeServer:
 
 class SimpleBridgeClient:
     def __init__(self, host="127.0.0.1", port=5557):
+        self.host = host
+        self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(5.0)
+        self.sock.settimeout(10.0)
         self.sock.connect((host, port))
 
     def send(self, cmd: str) -> str:
         self.sock.sendall((cmd + "\n").encode())
         return self.sock.recv(4096).decode().strip()
+
+    def reconnect(self):
+        try:
+            self.sock.close()
+        except Exception:
+            pass
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(10.0)
+        self.sock.connect((self.host, self.port))
 
     def close(self):
         self.sock.close()
@@ -176,10 +187,21 @@ def run_trigger_burst(client: SimpleBridgeClient, count=5, interval=0.5):
 
     print(f"\n  Sending {count} trigger pulses (line 0, {interval}s apart)...")
     for i in range(count):
-        r1 = client.send("TRIGGER 0 1")
-        time.sleep(0.005)  # 5ms pulse
-        r2 = client.send("TRIGGER 0 0")
-        print(f"    Pulse {i+1}/{count}: ON={r1}, OFF={r2}")
+        try:
+            r1 = client.send("TRIGGER 0 1")
+            time.sleep(0.005)  # 5ms pulse
+            r2 = client.send("TRIGGER 0 0")
+            print(f"    Pulse {i+1}/{count}: ON={r1}, OFF={r2}")
+        except (TimeoutError, ConnectionError, OSError) as e:
+            print(f"    Pulse {i+1}/{count}: connection lost ({e}), reconnecting...")
+            try:
+                client.reconnect()
+                r1 = client.send("TRIGGER 0 1")
+                time.sleep(0.005)
+                r2 = client.send("TRIGGER 0 0")
+                print(f"    Pulse {i+1}/{count} (retry): ON={r1}, OFF={r2}")
+            except Exception as e2:
+                print(f"    Pulse {i+1}/{count}: retry failed ({e2}), skipping")
         if i < count - 1:
             time.sleep(interval)
     print("  Done!\n")
