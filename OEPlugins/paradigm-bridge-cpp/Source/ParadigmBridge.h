@@ -136,6 +136,15 @@ private:
 
     std::unique_ptr<TcpCommandServer> tcpServer;
 
+    // Our own TTL event channel pointer.
+    // We bypass GenericProcessor::addTTLChannel() / setTTLState() because
+    // the stock Open Ephys GUI has a bug where addTTLChannel() does NOT call
+    // addProcessor(this) on the newly created EventChannel.  Without that
+    // call sourceNodeId stays at -1 (0xFFFF), downstream processors fail to
+    // look up the channel, TTLEvent::deserialize() returns nullptr, and the
+    // RecordNode crashes when it dereferences it.
+    EventChannel* localTtlChannel = nullptr;
+
     // Thread-safe trigger queue (TCP thread → audio thread)
     CriticalSection triggerLock;
     std::deque<PendingTrigger> pendingTriggers;

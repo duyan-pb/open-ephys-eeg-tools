@@ -29,7 +29,7 @@ public:
     ParadigmBridgeEditor(ParadigmBridge* parentNode);
     ~ParadigmBridgeEditor();
 
-    /** Handle button clicks (server start/stop, manual triggers) */
+    /** Handle button clicks (server start/stop, manual triggers, launch GUI, recording) */
     void buttonClicked(Button* button) override;
 
     /** Handle port label edits */
@@ -52,15 +52,22 @@ private:
     std::unique_ptr<Label> portEditor;
     std::unique_ptr<TextButton> serverButton;
 
-    // --- Row 2: Auto-start toggle ---
+    // --- Row 2: Auto-start toggle + Launch GUI ---
     std::unique_ptr<Label> autoStartLabel;
     std::unique_ptr<ToggleButton> autoStartButton;
+    std::unique_ptr<TextButton> launchGuiButton;
 
-    // --- Row 3-5: Status display ---
+    // --- Row 3-4: Status display ---
     std::unique_ptr<Label> serverStatusLabel;
     std::unique_ptr<Label> connectionStatusLabel;
     std::unique_ptr<Label> triggerCountLabel;
     std::unique_ptr<Label> lastCommandLabel;
+
+    // --- Row 5: Recording controls ---
+    std::unique_ptr<Label> recordingLabel;
+    std::unique_ptr<Label> recordingNameEditor;
+    std::unique_ptr<TextButton> recordStartButton;
+    std::unique_ptr<TextButton> recordStopButton;
 
     // --- Row 6: Manual trigger controls ---
     std::unique_ptr<Label> triggerLabel;
@@ -71,6 +78,7 @@ private:
 
     void updateServerButton();
     void updateStatusDisplay();
+    void launchExternalGui();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ParadigmBridgeEditor);
 };

@@ -1371,7 +1371,9 @@ int GenericProcessor::checkForEvents (bool checkForSpikes)
 
                     if (eventChannel != nullptr)
                     {
-                        handleTTLEvent (TTLEvent::deserialize (meta.data, eventChannel));
+                        TTLEventPtr ttlEvent = TTLEvent::deserialize (meta.data, eventChannel);
+                        if (ttlEvent != nullptr)
+                            handleTTLEvent (std::move (ttlEvent));
                     }
                 }
             }
@@ -1443,6 +1445,7 @@ void GenericProcessor::addTTLChannel (String name)
 
         eventChannels.add (new EventChannel (settings));
         ttlEventChannel = eventChannels.getLast();
+        ttlEventChannel->addProcessor (this);
 
         ttlLineStates.clear();
 

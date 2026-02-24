@@ -1,0 +1,47 @@
+Paradigm Bridge for Open Ephys — v2.0.0
+========================================
+
+What this does:
+  - Start/stop recording from PsychoPy (replaces HTTP requests approach)
+  - Send trigger annotations visible in LFP Viewer (like ANT Neuro has)
+  - Everything goes through one DLL, one TCP connection, no pip install
+
+Files:
+  paradigm-bridge-cpp.dll         → The plugin (this is all you need)
+  openephys_paradigm_bridge.py    → Drop-in replacement for Alexey's script
+  psychopy_example.py             → Minimal example for custom paradigms
+
+
+STEP 1: Copy the DLL
+---------------------
+Copy paradigm-bridge-cpp.dll into your Open Ephys plugins folder:
+
+
+Restart Open Ephys. "Paradigm Bridge" appears in the processor list.
+
+
+STEP 2: Build the signal chain
+-------------------------------
+  [Your Source] → [Paradigm Bridge] → [Record Node] → [LFP Viewer]
+
+Press Play (acquire).
+
+
+STEP 3: Run the script
+-----------------------
+  python openephys_paradigm_bridge.py
+
+That's it. No pip install. No extra packages. No HTTP server configuration.
+The script connects to the DLL via TCP and controls everything.
+
+
+What changed compared to the original python script:
+------------------------------------------
+Before:  requests.put("http://localhost:37497/api/status", json={"mode":"RECORD"})
+         → Needed 'pip install requests'
+         → No trigger annotations
+
+Now:     bridge.start_recording()
+         bridge.trigger_pulse(line=0)
+         → Zero dependencies (uses Python's built-in socket module)
+         → Triggers visible in LFP Viewer

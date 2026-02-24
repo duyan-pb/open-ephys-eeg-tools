@@ -9,15 +9,18 @@ and ParadigmBridge for Open Ephys integration. Demonstrates:
   - Block start/end markers
   - Proper experiment bracketing
 
-Trigger line assignments (convention):
-    Line 1 = Standard stimulus
-    Line 2 = Deviant stimulus
-    Line 3 = Participant response (button press)
-    Line 5 = Block start / end
-    Line 6 = Experiment start / end
+Trigger line assignments (0-based, 0–7):
+    Line 0 = Standard stimulus
+    Line 1 = Deviant stimulus
+    Line 2 = Participant response (button press)
+    Line 4 = Block start / end
+    Line 5 = Experiment start / end
 
 Open Ephys Setup:
-    [Source] → [Network Events] → [Bandpass Filter] → [Record Node] → [LFP Viewer]
+    [Source] → [Paradigm Bridge] → [Bandpass Filter] → [Record Node] → [LFP Viewer]
+
+    The Python script communicates with the Paradigm Bridge C++ plugin via
+    TCP (port 5557). No extra dependencies (ZMQ / pyzmq) needed.
 """
 
 import random
@@ -36,12 +39,12 @@ STIM_DURATION = 0.075       # 75 ms tone
 RESPONSE_WINDOW = 0.8       # seconds to respond
 ITI_RANGE = (0.8, 1.2)      # random inter-trial interval
 
-# Trigger line assignments
-TRIG_STANDARD = 1
-TRIG_DEVIANT = 2
-TRIG_RESPONSE = 3
-TRIG_BLOCK = 5
-TRIG_EXPERIMENT = 6
+# Trigger line assignments (0-based, matching paradigm-bridge-cpp lines 0–7)
+TRIG_STANDARD = 0
+TRIG_DEVIANT = 1
+TRIG_RESPONSE = 2
+TRIG_BLOCK = 4
+TRIG_EXPERIMENT = 5
 
 # ===========================================================================
 # Setup

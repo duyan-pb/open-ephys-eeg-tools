@@ -8,9 +8,9 @@ Firmware implementations for Teensy 4.1 microcontrollers used with Open Ephys pl
 |----------|----------|-----------|--------|
 | **[inear_teensy_firmware](inear_teensy_firmware/)** | Fixed 56-byte packets | 54.7 KB/s | `inear-teensy-source` |
 | **[inear_teensy_firmware_optimized](inear_teensy_firmware_optimized/)** | Variable 26-55 byte packets | ~28.5 KB/s | `inear-teensy-source-optimized` |
-| **[ads1299_bioserial_pro](ads1299_bioserial_pro/)** | BioSerial Pro fixed | 54.7 KB/s | N/A |
-| **[ads1299_bioserial_pro_optimized](ads1299_bioserial_pro_optimized/)** | BioSerial Pro optimized | ~28.5 KB/s | N/A |
-| **[ads1299_v12](ads1299_v12/)** | Legacy ADS1299 protocol | Varies | N/A |
+| **[ads1299_bioserial_pro](ads1299_bioserial_pro/)** | BioSerial Pro fixed | 54.7 KB/s | `bioserial-pro-source` |
+| **[ads1299_bioserial_pro_optimized](ads1299_bioserial_pro_optimized/)** | BioSerial Pro optimized | ~28.5 KB/s | `bioserial-pro-source` |
+| **[ads1299_v12](ads1299_v12/)** | Legacy ADS1299 protocol | Varies | *(deprecated)* |
 
 ## Recommended Setup
 
