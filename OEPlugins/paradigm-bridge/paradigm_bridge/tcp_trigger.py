@@ -9,6 +9,7 @@ additional Open Ephys plugins (no Network Events / ZMQ needed).
 
 Protocol (newline-terminated text):
     TRIGGER <line> <state>   → OK TRIGGER <line> <state>
+    PULSE <line>             → OK PULSE <line>
     RECORD START             → OK RECORD START ACCEPTED
     RECORD STOP              → OK RECORD STOP ACCEPTED
     RECORD DIR <path>        → OK RECORD DIR ACCEPTED
@@ -224,6 +225,24 @@ class TcpTriggerClient:
         time.sleep(duration_ms / 1000.0)
         self.send_trigger(line=line, state=0)
 
+    def send_point(self, line: int = 0) -> str:
+        """Send a point-style annotation (server-side immediate ON/OFF).
+
+        This uses the plugin's single-command ``PULSE`` path when available.
+        If connected to an older plugin version that does not support
+        ``PULSE``, it falls back to back-to-back ``TRIGGER`` ON/OFF commands.
+        """
+        resp = self.send_command(f"PULSE {line}")
+        if resp.startswith("OK"):
+            return resp
+
+        if not resp.startswith("ERROR unknown command"):
+            return resp
+
+        logger.warning("Server-side PULSE unsupported (%s); falling back", resp)
+        self.send_trigger(line=line, state=1)
+        return self.send_trigger(line=line, state=0)
+
     # ------------------------------------------------------------------
     # Convenience trigger codes for common paradigm events
     # ------------------------------------------------------------------
@@ -247,11 +266,14 @@ class TcpTriggerClient:
 
     def stimulus_pulse(self, line: int = 0, duration_ms: float = 5.0):
         """Send a brief stimulus-onset pulse."""
-        self.pulse(line=line, duration_ms=duration_ms)
+        if duration_ms <= 0:
+            self.send_point(line=line)
+        else:
+            self.pulse(line=line, duration_ms=duration_ms)
 
     def response(self, line: int = 2):
         """Mark a participant response."""
-        self.pulse(line=line, duration_ms=5.0)
+        self.send_point(line=line)
 
     def block_start(self, line: int = 4):
         """Mark block start."""

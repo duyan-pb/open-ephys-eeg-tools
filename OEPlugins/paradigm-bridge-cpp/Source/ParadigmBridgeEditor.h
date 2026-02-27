@@ -8,7 +8,7 @@
     - Connection status indicator
     - Trigger count and last command display
     - Auto-start toggle
-    - Manual trigger controls (line selector + ON/OFF buttons)
+    - Manual trigger controls (line selector + ON/OFF/PULSE buttons)
 
     ------------------------------------------------------------------
 */
@@ -75,6 +75,7 @@ private:
     std::unique_ptr<Label> triggerLineEditor;
     std::unique_ptr<TextButton> triggerOnButton;
     std::unique_ptr<TextButton> triggerOffButton;
+    std::unique_ptr<TextButton> triggerPulseButton;
 
     void updateServerButton();
     void updateStatusDisplay();

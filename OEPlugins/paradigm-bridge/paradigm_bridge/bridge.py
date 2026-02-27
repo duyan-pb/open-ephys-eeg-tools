@@ -13,8 +13,8 @@ Two trigger backends are supported:
     pyzmq and the Network Events plugin installed in the signal chain.
 """
 
-import time
 import logging
+from contextlib import contextmanager
 from typing import Optional
 
 from .recorder import RecordingController
@@ -302,7 +302,10 @@ class ParadigmBridge:
         # TCP backend
         if self._tcp_client is not None:
             try:
-                self._tcp_client.pulse(line=line, duration_ms=duration_ms)
+                if duration_ms <= 0:
+                    self._tcp_client.send_point(line=line)
+                else:
+                    self._tcp_client.pulse(line=line, duration_ms=duration_ms)
                 return
             except ConnectionError as e:
                 logger.warning("TCP trigger pulse failed: %s", e)
@@ -325,7 +328,7 @@ class ParadigmBridge:
 
     def response(self, line: int = 2):
         """Mark a participant response."""
-        self.trigger_pulse(line=line, duration_ms=5.0)
+        self.annotation_point(line=line)
 
     def block_start(self, line: int = 4):
         """Mark block start."""
@@ -342,6 +345,56 @@ class ParadigmBridge:
     def experiment_end(self, line: int = 5):
         """Mark experiment end."""
         self.send_trigger(line=line, state=0)
+
+    # ------------------------------------------------------------------
+    # Annotation helpers (point vs interval)
+    # ------------------------------------------------------------------
+
+    def annotation_point(self, line: int = 0):
+        """Send a single time-point annotation.
+
+        TCP backend uses the plugin's single-command ``PULSE`` path when
+        available. ZMQ backend falls back to an immediate ON/OFF pulse.
+        """
+        if self._tcp_client is not None:
+            try:
+                return self._tcp_client.send_point(line=line)
+            except ConnectionError as e:
+                logger.warning("TCP point annotation failed: %s", e)
+                return None
+
+        if self._zmq_triggers is not None:
+            return self._zmq_triggers.pulse(line=line, duration_ms=0.0)
+
+        logger.warning("Point annotation ignored (no trigger backend connected).")
+        return None
+
+    def annotation_start(self, line: int = 0):
+        """Start an interval annotation (TTL ON)."""
+        return self.send_trigger(line=line, state=1)
+
+    def annotation_end(self, line: int = 0):
+        """End an interval annotation (TTL OFF)."""
+        return self.send_trigger(line=line, state=0)
+
+    begin_interval = annotation_start
+    end_interval = annotation_end
+    mark_point = annotation_point
+
+    @contextmanager
+    def annotation_interval(self, line: int = 0):
+        """Context manager for interval annotations.
+
+        Example
+        -------
+        >>> with bridge.annotation_interval(line=0):
+        ...     present_stimulus()
+        """
+        self.annotation_start(line=line)
+        try:
+            yield
+        finally:
+            self.annotation_end(line=line)
 
     # ------------------------------------------------------------------
     # Paradigm helpers

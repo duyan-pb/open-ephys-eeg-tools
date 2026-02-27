@@ -87,14 +87,17 @@ def run_oddball_paradigm():
 
     # --- Setup PsychoPy (if available) ---
     if USE_PSYCHOPY:
-        win = visual.Window([800, 600], color="black")
+        win = visual.Window([800, 600], color="black", checkTiming=False)
         fixation = visual.TextStim(win, text="+", color="white", height=0.2)
         standard_sound = sound.Sound(value=1000, secs=STIM_DURATION)  # 1000 Hz standard
         deviant_sound = sound.Sound(value=1500, secs=STIM_DURATION)   # 1500 Hz deviant
 
     # --- Start recording ---
     bridge.start_recording()
-    time.sleep(0.5)  # Wait for recording to start
+    if USE_PSYCHOPY:
+        core.wait(0.5, hogCPUperiod=0.0)
+    else:
+        time.sleep(0.5)
 
     try:
         for block in range(N_BLOCKS):
@@ -105,7 +108,10 @@ def run_oddball_paradigm():
                 fixation.draw()
                 win.flip()
 
-            time.sleep(1.0)  # Pre-block pause
+            if USE_PSYCHOPY:
+                core.wait(1.0, hogCPUperiod=0.0)
+            else:
+                time.sleep(1.0)
 
             for trial in range(TRIALS_PER_BLOCK):
                 # Determine stimulus type
@@ -126,7 +132,10 @@ def run_oddball_paradigm():
                 stim_type = "DEVIANT" if is_deviant else "standard"
                 print(f"  Block {block+1}, Trial {trial+1}: {stim_type}")
 
-                time.sleep(STIM_DURATION)
+                if USE_PSYCHOPY:
+                    core.wait(STIM_DURATION, hogCPUperiod=0.0)
+                else:
+                    time.sleep(STIM_DURATION)
 
                 # Stimulus offset
                 bridge.trigger(0, 0)
@@ -136,12 +145,18 @@ def run_oddball_paradigm():
                     keys = event.getKeys(keyList=["space"], timeStamped=True)
                     if keys:
                         bridge.trigger(2, 1)  # Response marker
-                        time.sleep(0.01)
+                        if USE_PSYCHOPY:
+                            core.wait(0.01, hogCPUperiod=0.0)
+                        else:
+                            time.sleep(0.01)
                         bridge.trigger(2, 0)
 
                 # Inter-stimulus interval
                 isi = random.uniform(ISI_MIN, ISI_MAX)
-                time.sleep(isi)
+                if USE_PSYCHOPY:
+                    core.wait(isi, hogCPUperiod=0.0)
+                else:
+                    time.sleep(isi)
 
             bridge.trigger(3, 0)  # Block end marker
             bridge.message(f"Block {block + 1}/{N_BLOCKS} completed")
@@ -149,7 +164,10 @@ def run_oddball_paradigm():
             # Inter-block pause
             if block < N_BLOCKS - 1:
                 print(f"  Rest between blocks...")
-                time.sleep(3.0)
+                if USE_PSYCHOPY:
+                    core.wait(3.0, hogCPUperiod=0.0)
+                else:
+                    time.sleep(3.0)
 
     finally:
         # Always stop recording, even on error

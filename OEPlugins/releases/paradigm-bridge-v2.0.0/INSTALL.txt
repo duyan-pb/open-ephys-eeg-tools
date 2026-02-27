@@ -1,47 +1,139 @@
 Paradigm Bridge for Open Ephys — v2.0.0
-========================================
+============================================================
 
-What this does:
-  - Start/stop recording from PsychoPy (replaces HTTP requests approach)
-  - Send trigger annotations visible in LFP Viewer (like ANT Neuro has)
-  - Everything goes through one DLL, one TCP connection, no pip install
+Purpose
+-------
+Paradigm Bridge lets a PsychoPy (or plain Python) script control Open Ephys
+recording and send trigger annotations over one TCP connection to one DLL.
 
-Files:
-  paradigm-bridge-cpp.dll         → The plugin (this is all you need)
-  openephys_paradigm_bridge.py    → Drop-in replacement for Alexey's script
-  psychopy_example.py             → Minimal example for custom paradigms
-
-
-STEP 1: Copy the DLL
----------------------
-Copy paradigm-bridge-cpp.dll into your Open Ephys plugins folder:
+You get:
+  - Recording start/stop from Python
+  - Point markers (single time-point annotations)
+  - Interval annotations (start/stop)
+  - No `requests` / no Open Ephys HTTP API setup required
 
 
-Restart Open Ephys. "Paradigm Bridge" appears in the processor list.
+Package Contents
+----------------
+- `paradigm-bridge-cpp.dll`
+  Open Ephys plugin DLL (C++).
+- `openephys_paradigm_bridge.py`
+  Drop-in script for "press SPACE to start/stop" workflow.
+- `psychopy_example.py`
+  Minimal example showing point + interval annotations.
 
 
-STEP 2: Build the signal chain
--------------------------------
-  [Your Source] → [Paradigm Bridge] → [Record Node] → [LFP Viewer]
 
-Press Play (acquire).
+Handoff Files
+-------------
+Send this entire folder or at minimum these 4 files:
+- `paradigm-bridge-cpp.dll`
+- `openephys_paradigm_bridge.py`
+- `psychopy_example.py`
+- `INSTALL.txt`
+
+Optional:
+- `paradigm-bridge-v2.0.0.zip` or `paradigm-bridge-v2.0.0-handoff.zip`
 
 
-STEP 3: Run the script
+
+Install (Windows)
+-----------------
+1. Close Open Ephys GUI.
+2. Copy `paradigm-bridge-cpp.dll` to your Open Ephys plugins folder.
+   Typical locations:
+   - `C:\Program Files\Open Ephys GUI\plugins\`
+   - or your local build folder, e.g. `...\plugin-GUI\Build\Release\plugins\`
+3. Start Open Ephys GUI again.
+4. Confirm `Paradigm Bridge` appears in the processor list.
+
+
+Open Ephys Signal Chain
 -----------------------
-  python openephys_paradigm_bridge.py
+Build this chain:
 
-That's it. No pip install. No extra packages. No HTTP server configuration.
-The script connects to the DLL via TCP and controls everything.
+  `[Source] -> [Paradigm Bridge] -> [Record Node] -> [LFP Viewer]`
+
+Notes:
+  - Put `Paradigm Bridge` before `Record Node`.
+  - `LFP Viewer` is recommended so you can see the trigger annotations.
+  - Press `Play` (Acquire) before starting the Python script.
+  - The Paradigm Bridge TCP server auto-starts on acquisition by default.
 
 
-What changed compared to the original python script:
-------------------------------------------
-Before:  requests.put("http://localhost:37497/api/status", json={"mode":"RECORD"})
-         → Needed 'pip install requests'
-         → No trigger annotations
+Run (Quick Workflow)
+---------------------
+1. Open Ephys GUI is running and acquiring.
+2. Run:
 
-Now:     bridge.start_recording()
-         bridge.trigger_pulse(line=0)
-         → Zero dependencies (uses Python's built-in socket module)
-         → Triggers visible in LFP Viewer
+   `python openephys_paradigm_bridge.py`
+
+3. In the PsychoPy window:
+   - `SPACE` starts recording
+   - example markers/intervals are sent
+   - `SPACE` stops recording
+
+
+Run (Custom Paradigm)
+---------------------
+Use `psychopy_example.py` as a template, or copy the `ParadigmBridge` class
+from it into your own PsychoPy script.
+
+Important for PsychoPy startup stability:
+  - Use `visual.Window(..., checkTiming=False)` to avoid the frame-rate
+    measurement screen freezing on busy laptops.
+  - Prefer `core.wait(..., hogCPUperiod=0.0)` over `time.sleep(...)`
+    in PsychoPy loops to reduce CPU spikes.
+
+
+Annotation Types (ANT Neuro style)
+----------------------------------
+1. Point marker (single time-point annotation)
+
+   `bridge.marker(line=0)` or `bridge.point(line=0)`
+
+   Uses the DLL `PULSE <line>` command (single-command immediate ON/OFF).
+
+2. Interval annotation (start/stop)
+
+   `bridge.interval_start(line=1)`   # line HIGH
+   `...`
+   `bridge.interval_stop(line=1)`    # line LOW
+
+Recommended line mapping:
+  - line 0: stimulus onset point marker
+  - line 1: stimulus/task interval
+  - line 2: response marker
+  - line 4/5: block/experiment markers
+
+
+Troubleshooting
+---------------
+- PsychoPy stuck at "Attempting to measure frame rate..."
+  - Use `checkTiming=False` when creating the PsychoPy window.
+  - Close browsers/other GPU-heavy apps if needed.
+
+- `ConnectionRefusedError` / cannot connect to port 5557
+  - Open Ephys not running
+  - Paradigm Bridge missing from signal chain
+  - Acquisition not started (`Play` not pressed)
+  - Wrong DLL copied (old version / wrong plugins folder)
+
+- No markers visible in LFP Viewer
+  - Check `Paradigm Bridge` is before `Record Node`
+  - Verify you are sending `TRIGGER` / `PULSE` commands on lines 0-7
+  - Ensure acquisition is active (plugin only injects TTL events while acquiring)
+
+
+Protocol Summary (for debugging)
+--------------------------------
+Commands sent over TCP port `5557` (newline-terminated text):
+  - `PING`
+  - `STATUS`
+  - `TRIGGER <line> <0|1>`
+  - `PULSE <line>`                  (point marker)
+  - `RECORD START`
+  - `RECORD STOP`
+  - `RECORD NAME <name>`
+  - `RECORD DIR <path>`
+  - `MESSAGE <text>`

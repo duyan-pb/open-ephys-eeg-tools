@@ -154,6 +154,13 @@ ParadigmBridgeEditor::ParadigmBridgeEditor(ParadigmBridge* parentNode)
     triggerOffButton->addListener(this);
     addAndMakeVisible(triggerOffButton.get());
 
+    triggerPulseButton = std::make_unique<TextButton>("PULSE");
+    triggerPulseButton->setBounds(230, y, 55, 18);
+    triggerPulseButton->setColour(TextButton::buttonColourId, Colour(0xff1565c0));
+    triggerPulseButton->setTooltip("Point annotation (immediate ON/OFF pulse)");
+    triggerPulseButton->addListener(this);
+    addAndMakeVisible(triggerPulseButton.get());
+
     // Initial state
     updateServerButton();
     startTimerHz(5); // 5 Hz status refresh
@@ -212,6 +219,15 @@ void ParadigmBridgeEditor::buttonClicked(Button* button)
         int line = triggerLineEditor->getText().getIntValue();
         if (line >= 0 && line <= 7 && processor->isAcquisitionActive())
             processor->sendManualTrigger(line, false);
+    }
+    else if (button == triggerPulseButton.get())
+    {
+        int line = triggerLineEditor->getText().getIntValue();
+        if (line >= 0 && line <= 7 && processor->isAcquisitionActive())
+        {
+            processor->sendManualTrigger(line, true);
+            processor->sendManualTrigger(line, false);
+        }
     }
     else if (button == launchGuiButton.get())
     {

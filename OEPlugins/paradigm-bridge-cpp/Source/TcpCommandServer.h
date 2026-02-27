@@ -10,7 +10,8 @@
     Protocol: newline-terminated text commands
     
     Commands:
-        TRIGGER <line> <state>    - Send TTL trigger (line 0-7, state 0|1)
+        TRIGGER <line> <state>    - Send TTL trigger interval edge (line 0-7, state 0|1)
+        PULSE <line>              - Send a point-style marker (ON then OFF immediately)
         RECORD START              - Start recording
         RECORD STOP               - Stop recording
         RECORD DIR <path>         - Set recording parent directory

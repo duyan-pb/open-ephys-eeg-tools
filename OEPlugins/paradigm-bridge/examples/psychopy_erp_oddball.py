@@ -24,7 +24,6 @@ Open Ephys Setup:
 """
 
 import random
-import time
 from psychopy import visual, event, core, sound
 from paradigm_bridge import ParadigmBridge
 
@@ -53,7 +52,15 @@ TRIG_EXPERIMENT = 5
 bridge = ParadigmBridge(verbose=True)
 bridge.wait_for_gui(timeout=15)
 
-win = visual.Window(size=(1024, 768), fullscr=False, monitor='testMonitor', units='pix')
+# Skip PsychoPy's initial frame-rate measurement to avoid startup stalls on
+# heavily loaded systems (Open Ephys + plotting + browsers, etc.).
+win = visual.Window(
+    size=(1024, 768),
+    fullscr=False,
+    monitor='testMonitor',
+    units='pix',
+    checkTiming=False,
+)
 fixation = visual.TextStim(win, text='+', height=40)
 instruction = visual.TextStim(win, text='', height=24, wrapWidth=700)
 
@@ -83,7 +90,7 @@ event.waitKeys(keyList=['space'])
 
 bridge.start_recording("ERP_oddball")
 bridge.experiment_start(line=TRIG_EXPERIMENT)
-time.sleep(0.5)  # small settle time
+core.wait(0.5, hogCPUperiod=0.0)  # small settle time
 
 # ===========================================================================
 # Main paradigm loop
@@ -102,7 +109,7 @@ for block in range(NUM_BLOCKS):
 
     fixation.draw()
     win.flip()
-    time.sleep(1.0)
+    core.wait(1.0, hogCPUperiod=0.0)
 
     # Generate trial sequence
     trials = []
@@ -138,6 +145,8 @@ for block in range(NUM_BLOCKS):
                 response_made = True
                 rt = keys[0][1]
                 bridge.response(line=TRIG_RESPONSE)  # trigger: response
+            # Prevent a tight polling loop from burning a CPU core.
+            core.wait(0.001, hogCPUperiod=0.0)
 
         # Trigger: stimulus offset
         bridge.send_trigger(line=trigger_line, state=0)
@@ -153,7 +162,7 @@ for block in range(NUM_BLOCKS):
 
         # Inter-trial interval
         iti = random.uniform(*ITI_RANGE)
-        time.sleep(iti)
+        core.wait(iti, hogCPUperiod=0.0)
 
     # Block end
     bridge.block_end(line=TRIG_BLOCK)

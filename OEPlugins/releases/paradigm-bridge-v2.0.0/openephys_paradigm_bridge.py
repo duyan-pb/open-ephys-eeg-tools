@@ -37,10 +37,11 @@ Command                     Response                   Description
 =========================== ========================== ===========================
 ``PING``                    ``OK PONG``                Connection test
 ``TRIGGER <line> <0|1>``    ``OK TRIGGER <line> <s>``  Set TTL line 0-7 high/low
-``RECORD START``            ``OK RECORD STARTED``      Start recording
-``RECORD STOP``             ``OK RECORD STOPPED``      Stop recording
-``RECORD NAME <name>``      ``OK RECORD NAME <name>``  Set recording dir name
-``RECORD DIR <path>``       ``OK RECORD DIR <path>``   Set recording base path
+``PULSE <line>``            ``OK PULSE <line>``        Point marker (immediate ON/OFF)
+``RECORD START``            ``OK RECORD START ACCEPTED`` Start recording
+``RECORD STOP``             ``OK RECORD STOP ACCEPTED``  Stop recording
+``RECORD NAME <name>``      ``OK RECORD NAME ACCEPTED``  Set recording dir name
+``RECORD DIR <path>``       ``OK RECORD DIR ACCEPTED``   Set recording base path
 ``MESSAGE <text>``          ``OK MESSAGE``             Print to OE console
 ``STATUS``                  ``OK STATUS …``            Query server state
 =========================== ========================== ===========================
@@ -74,7 +75,6 @@ Generated for the duyan-pb/open-ephys-eeg-tools workspace.
 """
 
 import socket
-import time
 from psychopy import visual, event, core
 
 
@@ -89,7 +89,7 @@ class ParadigmBridge:
     Communicates over a persistent TCP connection using a simple
     newline-delimited text protocol.  Each command is sent as a single
     UTF-8 line; the server replies with one line starting with ``OK``
-    (or ``ERR`` on failure).
+        (or ``ERROR`` on failure).
 
     Parameters
     ----------
@@ -233,9 +233,68 @@ class ParadigmBridge:
         ms : int or float, optional
             Pulse duration in milliseconds (default ``5``).
         """
+        if ms <= 0:
+            return self.point(line)
+
         self.trigger_on(line)
-        time.sleep(ms / 1000.0)
+        core.wait(ms / 1000.0, hogCPUperiod=0.0)
         self.trigger_off(line)
+
+    def point(self, line=0):
+        """Single time-point marker using the DLL's PULSE command.
+
+        Falls back to back-to-back TRIGGER ON/OFF if an older DLL is used.
+        """
+        response = self._cmd(f"PULSE {line}")
+        if response.startswith("OK"):
+            return response
+        if "unknown command" in response:
+            self.trigger_on(line)
+            self.trigger_off(line)
+            return "OK TRIGGER fallback"
+        return response
+
+    # ---- Annotation helpers -------------------------------------------------
+    # ANT Neuro style: single time-point markers AND interval annotations.
+
+    def marker(self, line=0):
+        """Single time-point annotation (instantaneous event marker).
+
+        Sends a 1 ms pulse — the shortest practical pulse.  Use this to
+        mark discrete events like stimulus onset, button press, etc.
+        Equivalent to what ANT Neuro calls a 'marker'.
+
+        Parameters
+        ----------
+        line : int, optional
+            Digital line index (0-7, default ``0``).
+        """
+        return self.point(line)
+
+    def interval_start(self, line=1):
+        """Start an interval annotation by setting a TTL line HIGH.
+
+        Call :meth:`interval_stop` with the same line to end the interval.
+        Use a different line than your point markers (e.g. line 1 for
+        intervals, line 0 for point markers) to distinguish them in
+        the recording.  Equivalent to ANT Neuro 'interval annotation start'.
+
+        Parameters
+        ----------
+        line : int, optional
+            Digital line index (0-7, default ``1``).
+        """
+        return self.trigger_on(line)
+
+    def interval_stop(self, line=1):
+        """End an interval annotation by setting the TTL line LOW.
+
+        Parameters
+        ----------
+        line : int, optional
+            Digital line index (0-7, default ``1``).
+        """
+        return self.trigger_off(line)
 
     # ---- Miscellaneous ------------------------------------------------------
 
@@ -263,7 +322,7 @@ class ParadigmBridge:
 
 
 # ===========================================================================
-# PsychoPy user input window (same concept as Alexey's original script)
+# PsychoPy user input window (same concept as the original script)
 #
 # Flow:
 #   1. Open a PsychoPy window and attempt TCP connection to the plugin.
@@ -273,7 +332,11 @@ class ParadigmBridge:
 #   5. Wait for SPACE → stop recording → wait for any key → exit.
 # ===========================================================================
 
-win = visual.Window(size=(800, 600), monitor='testMonitor', units='pix')
+# checkTiming=False prevents PsychoPy from hanging at
+# "Attempting to measure frame rate of screen, please wait..."
+# which freezes on many laptops (hybrid GPU, high CPU load, etc.).
+win = visual.Window(size=(800, 600), monitor='testMonitor', units='pix',
+                    checkTiming=False)
 
 # --- Step 1: Connect to the Paradigm Bridge TCP server ---
 try:
@@ -321,13 +384,24 @@ text_stim.setText(
 text_stim.draw()
 win.flip()
 
-# --- Step 4: Send example trigger pulses ---
-# Each pulse is a brief HIGH→LOW transition on TTL line 0.
-# These appear as vertical event markers in LFP Viewer and are
-# persisted to the events file by the Record Node.
+# --- Step 4: Send example annotations ---
+# Demonstrates both ANT-Neuro-style annotation types:
+#
+# (a) Single time-point markers  (line 0) — instantaneous events
+#     e.g. stimulus onset, button press
+#
+# (b) Interval annotations       (line 1) — sustained periods
+#     e.g. eyes-open block, task epoch
+
+# --- 4a: Three point markers, 1 s apart ---
 for i in range(3):
-    bridge.trigger_pulse(line=0)   # ~5 ms pulse on line 0
-    time.sleep(1.0)                # 1 second between pulses
+    bridge.marker(line=0)          # ~1 ms pulse on line 0
+    core.wait(1.0, hogCPUperiod=0.0)
+
+# --- 4b: One interval annotation (2 s block) ---
+bridge.interval_start(line=1)      # line 1 goes HIGH
+core.wait(2.0, hogCPUperiod=0.0)   # interval lasts 2 seconds
+bridge.interval_stop(line=1)       # line 1 goes LOW
 
 # --- Step 5: Wait for user to stop recording ---
 event.waitKeys(keyList=['space'])

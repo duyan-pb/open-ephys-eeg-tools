@@ -216,8 +216,36 @@ String TcpCommandServer::processCommand(const String& command, ClientSessionStat
         return "ERROR unauthorized; send AUTH <token>";
     }
 
+    // --- PULSE <line> ---
+    if (trimmed.startsWithIgnoreCase("PULSE "))
+    {
+        StringArray parts;
+        parts.addTokens(trimmed, " ", "");
+
+        if (parts.size() != 2)
+            return "ERROR PULSE requires <line>";
+
+        int line = 0;
+        if (!tryParseIntStrict(parts[1], line))
+            return "ERROR line must be an integer";
+
+        if (line < 0 || line > 7)
+            return "ERROR line must be 0-7";
+
+        if (listener)
+        {
+            // Point annotation semantics: enqueue ON and OFF back-to-back.
+            // This avoids a client-side sleep/round-trip and keeps the
+            // command path lightweight under load.
+            listener->triggerReceived(line, true);
+            listener->triggerReceived(line, false);
+        }
+
+        return "OK PULSE " + String(line);
+    }
+
     // --- TRIGGER <line> <state> ---
-    if (trimmed.startsWithIgnoreCase("TRIGGER "))
+    else if (trimmed.startsWithIgnoreCase("TRIGGER "))
     {
         StringArray parts;
         parts.addTokens(trimmed, " ", "");

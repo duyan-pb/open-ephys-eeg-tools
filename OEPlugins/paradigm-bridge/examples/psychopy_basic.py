@@ -23,7 +23,6 @@ Trigger line assignments (0-based, 0–7):
 
 from psychopy import visual, event, core
 from paradigm_bridge import ParadigmBridge
-import time
 
 # ===========================================================================
 # 1. Connect to Open Ephys
@@ -43,7 +42,14 @@ print(f"Processors: {report['processors']}")
 # 2. PsychoPy setup
 # ===========================================================================
 
-win = visual.Window(size=(800, 600), monitor='testMonitor', units='pix')
+# `checkTiming=False` avoids PsychoPy's startup frame-rate calibration screen,
+# which can appear to "freeze" on busy systems while Open Ephys is rendering.
+win = visual.Window(
+    size=(800, 600),
+    monitor='testMonitor',
+    units='pix',
+    checkTiming=False,
+)
 text_stim = visual.TextStim(win, text='Press SPACE to begin recording')
 text_stim.draw()
 win.flip()
@@ -82,12 +88,12 @@ for trial in range(NUM_TRIALS):
     win.flip()
 
     bridge.stimulus_on(line=0)           # TTL ON line 0 = stimulus onset
-    time.sleep(STIM_DURATION)
+    core.wait(STIM_DURATION, hogCPUperiod=0.0)
     bridge.stimulus_off(line=0)          # TTL OFF line 0 = stimulus offset
 
     # --- ITI (blank screen) ---
     win.flip()
-    time.sleep(ITI)
+    core.wait(ITI, hogCPUperiod=0.0)
 
 # ===========================================================================
 # 5. Stop recording
@@ -99,7 +105,7 @@ bridge.stop_recording()
 text_stim.setText('Done! Recording saved.')
 text_stim.draw()
 win.flip()
-time.sleep(2)
+core.wait(2.0, hogCPUperiod=0.0)
 
 # ===========================================================================
 # 6. Cleanup
