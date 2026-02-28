@@ -7,7 +7,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage[margin=2.5cm]{geometry}
+\usepackage[margin=2.0cm]{geometry}
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{booktabs}
@@ -59,8 +59,9 @@
 % --- Header / footer ---
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small BioBoard EEG System Architecture}
-\fancyhead[R]{\small v1.0 — \today}
+\fancyhead[L]{\small BioBoard EEG System Architecture DRAFT}
+\fancyhead[R]{\small v0.1 — \today}
+\fancyfoot[L]{\small Document ID: Pending}
 \fancyfoot[C]{\thepage}
 
 % --- Section formatting ---
@@ -78,11 +79,47 @@
 \begin{document}
 
 \begin{center}
-    {\LARGE\bfseries In-Ear System Architecture Documentation} \\[0.5em]
-    {\small Version 1.0 \quad---\quad \today}
+    {\LARGE\bfseries In-Ear System Architecture Documentation --- DRAFT} \\[0.5em]
+    {\small Version 0.1 \quad---\quad \today}
 \end{center}
 
 \vspace{1em}
+\begin{table}[H]
+\centering
+\caption*{\large\bfseries\color{hwcolor}Document Control}
+\begin{tabularx}{0.9\textwidth}{|>{\bfseries}l|X|}
+\hline
+Document ID & Pending \\
+ \hline
+Version & 0.1 \\
+ \hline
+Status & Draft \\
+ \hline
+Prepared by & Polymer Bionics Limited \\
+ \hline
+Approved by & \\
+ \hline
+Approval Date & \\
+ \hline
+Review Date & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\vspace{0.8em}
+\begin{table}[H]
+\centering
+\caption*{\large\bfseries\color{hwcolor}Revision History}
+\begin{tabularx}{0.9\textwidth}{|l|l|l|X|}
+\hline
+\textbf{Version} & \textbf{Date} & \textbf{Author} & \textbf{Summary} \\
+\hline
+0.1 & \today & Polymer Bionics Limited & Initial draft issued for internal review and QMS approval. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\newpage
 \tableofcontents
 \vspace{1.5em}
 \newpage
@@ -115,9 +152,12 @@ Primary production path (recommended):
     \item \textbf{Connector-first path:} Qt Connector App reads serial data and
           publishes LSL streams directly. Open Ephys can then subscribe as an
           LSL consumer (same as MATLAB, Python, LabRecorder, etc.).
-    \item \textbf{Alternative Open Ephys path:} Our custom InEar Teensy Source plugin reads serial
-          data directly, Open Ephys visualises internally, and our LSL Outlet plugin
-          re-publishes the data as LSL streams for external consumers.
+    \item \textbf{Single-parser architecture:} No direct firmware $\rightarrow$ Open Ephys
+          serial path in the primary design. This avoids maintaining two separate
+          protocol parsers (Connector + Open Ephys).
+    \item \textbf{Event round-trip (optional):} Open Ephys can publish markers/events
+          back into LSL (e.g., Paradigm Bridge), while external tools such as
+          PsychoPy can also publish behavioral/event streams to LSL.
 \end{itemize}
 
 \begin{figure}[H]
@@ -132,54 +172,51 @@ Primary production path (recommended):
     conn/.style={draw=conncolor, fill=conncolor!10, rounded corners, thick,
                  minimum width=3.2cm, minimum height=0.8cm},
     lslbus/.style={draw=infracolor, fill=infracolor!10, thick,
-                   minimum width=12cm, minimum height=0.6cm,
+                   minimum width=6.65cm, minimum height=0.6cm,
                    font=\small\bfseries},
     consumer/.style={draw=plugincolor, fill=plugincolor!10, rounded corners, thick,
                      minimum width=2cm, minimum height=0.7cm,
                      font=\scriptsize},
-    oe/.style={draw=oecolor, fill=oecolor!10, rounded corners, thick,
-               minimum width=3.2cm, minimum height=0.7cm,
+    oeconsumer/.style={draw=oecolor, fill=oecolor!10, rounded corners, thick,
+               minimum width=2.6cm, minimum height=0.9cm,
                font=\scriptsize},
+    extsrc/.style={draw=extcolor, fill=extcolor!10, rounded corners, thick,
+                   minimum width=2.8cm, minimum height=0.75cm,
+                   font=\scriptsize},
     arr/.style={-{Stealth[length=2.5mm]}, thick}
 ]
     % Row 0: Hardware
     \node[hw] (bio) at (0, 0) {BioBoard\\(Teensy~4.1 + ADS1299)};
 
     % Row 1: Firmware
-    \node[fw] (fw) at (0, -1.4) {Firmware\\Compact Protocol v1.0};
+    \node[fw] (fw) at (0, -1.6) {Firmware\\Compact Protocol v1.0};
 
     % Connector (primary path)
-    \node[conn] (qt) at (0, -3.1) {Qt Connector App\\{\scriptsize primary path, USB $\to$ LSL}};
+    \node[conn] (qt) at (0, -3.2) {Qt Connector App\\{\scriptsize primary path, USB $\to$ LSL}};
 
     % LSL bus (transport/infrastructure, not an L4 consumer)
     \node[lslbus] (lsl) at (0, -6.7) {LSL Network (transport layer)};
 
-    % Alternative Open Ephys direct path (shown as optional)
-    \node[oe] (oesrc) at (5.3, -2.6) {Our InEar Source\\{\scriptsize alternative direct serial path}};
-    \node[oe] (oevis) at (5.3, -3.9) {Open Ephys\\{\scriptsize visualise / record}};
-    \node[oe] (oelsl) at (5.3, -5.2) {Our LSL Outlet Plugin\\{\scriptsize optional re-publish to LSL}};
+    % External behavior/event source
+    \node[extsrc] (psy) at (5.1, -5.0) {PsychoPy /\\Behavior Apps\\{\tiny publish markers/events}};
 
     % Consumers
-    \node[consumer] at (-5.0, -9.2) (oein)   {Open Ephys\\{\tiny (via LSL inlet)}};
-    \node[consumer] at (-2.5, -9.2) (obci)   {OpenBCI GUI};
+    \node[oeconsumer] at (-5.75, -9.2) (oein) {Open Ephys\\{\tiny LSL inlet + optional outlet}};
+    \node[consumer, draw=oecolor, fill=oecolor!10] at (-2.875, -9.2) (obci)   {OpenBCI GUI};
     \node[consumer] at (0, -9.2)    (matlab) {MATLAB /\\Python};
-    \node[consumer] at (2.5, -9.2)  (mne)    {Python Scripts};
-    \node[consumer] at (5.0, -9.2)  (labrec) {LabRecorder\\{\tiny (BIDS/XDF)}};
+    \node[consumer] at (2.875, -9.2)  (mne)    {Python Scripts};
+    \node[consumer] at (5.75, -9.2)  (labrec) {LabRecorder\\{\tiny (BIDS/XDF)}};
 
     % Arrows — top
-    \draw[arr] (bio) -- node[right, font=\scriptsize] {USB} (fw);
+    \draw[arr] (bio) -- (fw);
 
     % Arrows — primary path
-    \draw[arr] (fw) -- (qt);
+    \draw[arr] (fw) -- node[right, font=\scriptsize] {USB} (qt);
     \draw[arr] (qt) -- (lsl);
 
-    % Arrows — alternative Open Ephys direct path
-    \draw[arr] (fw.south) -- ++(0,-0.25) -| (oesrc.north);
-    \draw[arr] (oesrc) -- (oevis);
-    \draw[arr] (oevis) -- (oelsl);
-    \draw[-{Stealth[length=3mm]}, line width=2pt, draw=oecolor, dashed]
-          (oelsl.west) -- ++(-1.3,0) |- ([xshift=2.4cm]lsl.north)
-          node[pos=0.22, above=2pt, font=\scriptsize\bfseries, text=oecolor] {alt. path};
+    % Arrows — external behavior/event source to LSL
+    \draw[arr] (psy.south) -- ++(0,-0.55) -| (lsl.east)
+          node[pos=0.28, right, yshift=-4pt, font=\scriptsize] {behavior/event markers};
 
     % Arrows — consumers
     \draw[arr] (lsl) -- (oein);
@@ -187,30 +224,35 @@ Primary production path (recommended):
     \draw[arr] (lsl) -- (matlab);
     \draw[arr] (lsl) -- (mne);
     \draw[arr] (lsl) -- (labrec);
+    \draw[-{Stealth[length=3mm]}, line width=1.8pt, draw=oecolor, dashed]
+          (oein.north) -- ++(0,1.3) -| ([xshift=-2.8cm]lsl.south)
+          node[pos=0.32, below=1pt, font=\scriptsize\bfseries, text=oecolor]
+          {optional events out};
 
     % Background labels
     \begin{scope}[on background layer]
         \node[fit=(bio), inner sep=6pt, fill=hwcolor!5, draw=hwcolor!30,
               dashed, rounded corners,
-              label={[hwcolor, font=\footnotesize\bfseries]above:L1 — Hardware}] {};
+              label={[hwcolor, font=\footnotesize\bfseries]left:L1 — Hardware}] {};
         \node[fit=(fw), inner sep=6pt, fill=fwcolor!5, draw=fwcolor!30,
               dashed, rounded corners,
               label={[fwcolor, font=\footnotesize\bfseries]left:L2 — Firmware}] {};
         \node[fit=(qt), inner sep=6pt, fill=conncolor!5, draw=conncolor!30,
               dashed, rounded corners,
               label={[conncolor, font=\footnotesize\bfseries]left:L3 — Connector}] {};
-        \node[fit=(oesrc)(oevis)(oelsl), inner sep=6pt, fill=oecolor!5,
-              draw=oecolor!30, dashed, rounded corners,
-              label={[oecolor, font=\footnotesize\bfseries]right=4pt:Alt. Open Ephys\\direct path}] {};
+        \node[fit=(psy), inner sep=6pt, fill=extcolor!5,
+              draw=extcolor!30, dashed, rounded corners,
+              label={[extcolor, font=\footnotesize\bfseries]right=4pt:External behavior\\and event sources}] {};
         \node[fit=(oein)(obci)(matlab)(mne)(labrec), inner sep=8pt,
               fill=plugincolor!3, draw=plugincolor!25, dashed, rounded corners,
-              label={[plugincolor, font=\footnotesize\bfseries]below:L4 — LSL Consumers (incl. Open Ephys)}] {};
+              label={[plugincolor, font=\footnotesize\bfseries]below:L4 — LSL Consumers}] {};
     \end{scope}
 \end{tikzpicture}}% end resizebox
-\caption{Primary architecture: Qt Connector App sits before Open Ephys and publishes
-         LSL streams consumed by Open Ephys and other tools.  An alternative
-         direct Open Ephys plugin path is also shown (dashed). The LSL network
-         is transport infrastructure, not an L4 consumer.}
+\caption{Primary architecture: Qt Connector App is the single serial parser and
+         publishes LSL streams consumed by Open Ephys and other tools. External
+         behavior/event tools (e.g., PsychoPy) can publish markers to LSL, and
+         Open Ephys can optionally publish events back to LSL (dashed). The LSL
+         network is transport infrastructure, not an L4 consumer.}
 \label{fig:system-overview}
 \end{figure}
 
@@ -228,17 +270,17 @@ Primary production path (recommended):
 \label{tab:hw-components}
 \begin{tabularx}{\textwidth}{l l X}
 \toprule
-\textbf{Component} & \textbf{Part} & \textbf{Function} \\
+\textbf{Component} & \textbf{Manufacturer / Part} & \textbf{Function} \\
 \midrule
 MCU          & Teensy~4.1 (ARM Cortex-M7, 600\,MHz)
              & Main controller; USB 2.0 Full Speed \\
-EEG ADC      & TI ADS1299 (24-bit, 8-ch)
+EEG ADC      & \makecell[l]{Texas Instruments\\ADS1299\\\href{https://www.ti.com/lit/gpn/ads1299}{datasheet}}
              & Biosignal front-end; SPI interface; configurable gain 1$\times$--24$\times$ \\
-Accelerometer & ADXL367 (3-axis, $\pm$2\,g/$\pm$4\,g/$\pm$8\,g)
+Accelerometer & \makecell[l]{Analog Devices, Inc.\\ADXL367\\\href{https://www.analog.com/media/en/technical-documentation/data-sheets/adxl367.pdf}{datasheet}}
              & Motion/orientation; low-noise MEMS \\
-PPG / SpO$_2$ & MAXM86161 (optical biosensor)
+PPG / SpO$_2$ & \makecell[l]{Analog Devices, Inc.\\MAXM86161\\\href{https://www.analog.com/media/en/technical-documentation/data-sheets/maxm86161.pdf}{datasheet}}
              & Integrated PPG + SpO$_2$; single optical module \\
-Temperature  & TMP117 ($\pm$0.1\,°C accuracy)
+Temperature  & \makecell[l]{Texas Instruments\\TMP117\\\href{https://www.ti.com/lit/gpn/tmp117}{datasheet}}
              & High-precision digital temperature sensor \\
 Connection   & USB 2.0
              & Serial at 2\,Mbaud (2\,000\,000\,bps) \\
@@ -663,7 +705,7 @@ LSL, completely independent of Open Ephys or any other recording software.
 \label{fig:lsl-connector-app}
 \end{figure}
 
-\subsubsection{Minimum Viable Product (MVP)}
+\subsection{Minimum Viable Product (MVP)}
 
 \paragraph{User Interface}
 
@@ -741,7 +783,7 @@ Hardware failure flags
 \end{tabularx}
 \end{table}
 
-\subsubsection{Future Roadmap}
+\subsection{Future Roadmap}
 
 \paragraph{Expanded Hardware Support}
 
@@ -769,16 +811,17 @@ Hardware failure flags
 The LSL streams from the Qt Connector App can be consumed by any
 LSL-compatible software (OpenBCI GUI, MATLAB, LabRecorder, Python scripts,
 or any \texttt{liblsl} binding).  For \textbf{Open Ephys} users, in-house
-C++ plugins provide enhanced integration as an alternative.
+C++ plugins provide enhanced integration on top of the LSL-first workflow.
 
-\subsection{Open Ephys Plugin Inventory (Alternative Path)}
+\subsection{Open Ephys Plugin Inventory (Optional Integrations)}
 
-For users who prefer Open Ephys, the following plugins are available.
-All are \textbf{alternatives} to the Qt~Connector~App~$\to$~LSL path.
+For users who prefer extended Open Ephys workflows, the following plugins are
+available. The primary production path remains
+Qt~Connector~App~$\to$~LSL~$\to$~Open~Ephys~(LSL inlet).
 
 \begin{table}[H]
 \centering
-\caption{Complete plugin inventory (all plugins are alternatives to the Qt Connector path)}
+\caption{Complete plugin inventory (optional Open Ephys integrations)}
 \label{tab:plugin-inventory}
 \begin{tabularx}{\textwidth}{l l X}
 \toprule
@@ -804,13 +847,12 @@ File Reader                 & Source     & Built-in file playback (extended by E
 \end{tabularx}
 \end{table}
 
-\subsection{Source Plugins — Serial Data Reader}
+\subsection{Source Plugins — Serial Data Reader (Legacy / Development)}
 
 The InEar Teensy Source plugin is a \textbf{custom in-house plugin}
-that reads serial data directly from the BioBoard over USB — no
-existing Open Ephys community plugin provides this functionality.
-Combined with our LSL Outlet plugin downstream in the signal chain,
-Open Ephys acts as both a visualiser and an LSL stream producer.
+that reads serial data directly from the BioBoard over USB. It is kept for
+legacy compatibility and low-level debugging, but is not part of the primary
+production architecture (which uses the Qt Connector as the single parser).
 
 \begin{figure}[H]
 \centering
@@ -986,30 +1028,37 @@ EDF, BDF, EDF+, CSV, and XZ-compressed CSV files for offline replay.
 
 \subsection{Primary Path — Qt Connector App (Standalone)}
 
-For users without Open Ephys:
+For users with or without Open Ephys:
 
 \begin{lstlisting}
 [BioBoard] -> USB -> [Qt Connector App] -> LSL network
                                              |
-              +------------------------------+---------------------+
-              |                              |                     |
-        [OpenBCI GUI]                 [LabRecorder]          [MATLAB/Python]
-                                       (XDF file)
+              +-------------+----------------+---------------------+
+              |             |                |                     |
+      [Open Ephys Inlet] [OpenBCI GUI] [LabRecorder]        [MATLAB/Python]
+      (visualize/record)               (XDF file)
+
+[PsychoPy / behavior scripts] -> LSL network (markers/events)
 \end{lstlisting}
 
-\subsection{Open Ephys Path — Serial Reader + LSL Outlet}
+\subsection{Open Ephys Path — LSL Inlet + Optional LSL Outlet}
 
-Open Ephys reads serial data directly, visualises internally, and
-re-publishes to LSL for external consumers:
+Open Ephys subscribes to the Connector App stream via LSL (no direct serial
+parser in Open Ephys on the primary architecture), visualises/records
+internally, and can optionally publish events/markers back to LSL:
 
 \begin{lstlisting}
-[BioBoard] -> USB -> [InEar Source] -> [LFP Viewer]
-                                    -> [Paradigm Bridge] -> [Record Node]
-                                    -> [LSL Outlet] -> LSL network
-                                                         |
-                                          +--------------+--------+
-                                          |              |        |
-                                    [LabRecorder]  [MATLAB]  [Python Scripts]
+[BioBoard] -> USB -> [Qt Connector App] -> LSL network
+                                             |
+                                      [Open Ephys Inlet]
+                                             |
+              +------------------------+------------------------+
+              |                        |                        |
+        [LFP Viewer]   [Paradigm Bridge] -> [Record Node]   [LSL Outlet]
+                                                                |
+                                                            LSL network
+                                                                |
+                                            [LabRecorder] [MATLAB] [Python]
 \end{lstlisting}
 
 \subsection{Offline Replay with Annotations}
