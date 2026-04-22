@@ -2,7 +2,7 @@
 # Install with: pip install -r requirements.txt
 
 # Core LSL library
-pylsl>=1.16.0
+pylsl>=1.18.2
 
 # EDF file reading
 mne>=1.0.0
