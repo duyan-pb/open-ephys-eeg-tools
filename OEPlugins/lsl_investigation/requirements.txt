@@ -5,7 +5,7 @@
 pylsl>=1.16.0
 
 # EDF file reading
-mne>=1.0.0
+mne>=1.12.1
 
 # Data processing
 numpy>=1.20.0
